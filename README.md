@@ -1,14 +1,16 @@
 # ionsails
 
-A Clojure library designed to ... well, that part is up to you.
+WIP - A terminal-based Roguelike game
 
 ## Usage
 
-FIXME
+1. Clone repo
 
-## License
+2. Ensure leinigen and a java are installed
 
-Copyright © 2015 FIXME
+Use:
 
-Distributed under the Eclipse Public License either version 1.0 or (at
-your option) any later version.
+    lein run - To play
+    lein uberjar - To build a jar
+    lein test - To run unittests
+    lein repl - To begin a REPL
