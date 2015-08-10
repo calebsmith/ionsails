@@ -1,6 +1,6 @@
-(ns ionsails.core-test
+(ns ionsails.ui-test
   (:require [clojure.test :refer :all]
-            [ionsails.core :refer :all]))
+            [ionsails.ui :refer :all]))
 
 (def test-tileset [
   [" " :black :black]
@@ -47,7 +47,8 @@
          (game-board->cmds [
                             [1 2 2 1]
                             [1 2 1 1]
-                            [1 2 2 1]])
+                            [1 2 2 1]]
+                           test-tileset)
          '((0 0 " " {:fg :black, :bg :blue})
            (1 0 "." {:fg :yellow, :bg :green})
            (2 0 "." {:fg :yellow, :bg :green})
