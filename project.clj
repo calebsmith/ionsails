@@ -7,4 +7,5 @@
                  [clojure-lanterna "0.9.4"]]
   :main ^:skip-aot ionsails.core
   :target-path "target/%s"
-  :profiles {:uberjar {:aot :all}})
+  :profiles {:uberjar {:aot :all}
+             :dev {:dependencies [[net.mikera/clisk "0.10.0"]]}})
