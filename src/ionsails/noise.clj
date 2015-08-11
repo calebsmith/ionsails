@@ -48,6 +48,7 @@
          [ 0 1 1 ] [ 0 -1 1 ] [ 0 1 -1 ] [ 0 -1 -1 ]
          [ 1 1 0 ] [ -1 1 0 ] [ 0 -1 1 ] [ 0 -1 -1 ]])
 
+
 (def G4 [[ -1 -1 -1 0 ] [ -1 -1 1 0 ] [ -1 1 -1 0 ] [ -1 1 1 0 ]
          [ 1 -1 -1 0 ] [ 1 -1 1 0 ] [ 1 1 -1 0 ] [ 1 1 1 0 ]
          [ -1 -1 0 -1 ] [ -1 1 0 -1 ] [ 1 -1 0 -1 ] [ 1 1 0 -1 ]
@@ -67,7 +68,7 @@
 (defn grad1 [hash-val x]
   (let [h (bit-and hash-val 1)
         Gx (G1 h)]
-     (* x (G1 h))))
+     (* x Gx)))
 
 
 (defn grad2 [hash-val x y]
@@ -88,6 +89,7 @@
      (* y Gy)
      (* z Gz))))
 
+
 (defn grad4 [hash-val x y z w]
   (let [h (bit-and hash-val 31)
         Gx ((G4 h) 0)
@@ -100,6 +102,37 @@
      (* z Gz)
      (* w Gw))))
 
+(defn grad
+  [hash x y z]
+  (let [h (bit-and hash 15)
+        u (if (< h 8) x y)
+        v (if (< h 4) y (if (or (= h 12) (= h 14)) x z))]
+    (+ (if (= (bit-and h 1) 0) u (- u))
+       (if (= (bit-and h 2) 0) v (- v)))))
+
+
+(defn grad-prime
+  [hash-val x y z]
+  (let [xn (- x)
+        yn (- y)
+        zn (- z)]
+    (condp = (bit-and hash-val 15)
+          0 (+ x y)
+          1 (+ xn y)
+          2 (+ x yn)
+          3 (+ xn yn)
+          4 (+ x z)
+          5 (+ xn z)
+          6 (+ x zn)
+          7 (+ xn zn)
+          8 (+ y z)
+          9 (+ yn z)
+          10 (+ y zn)
+          11 (+ yn zn)
+          12 (+ x y)
+          13 (+ yn z)
+          14 (+ xn y)
+          15 (+ yn zn))))
 
 (defn perlin1 [x]
   (let [X (bit-and (int x) 255)
@@ -107,7 +140,7 @@
         u (fade xx)
         A (p X)
         B (p (+ X 1))]
-    (linear-erp u (grad1 (p A) xx) (grad1 (p B) (- x 1)))))
+    (linear-erp u (grad1 (p A) xx) (grad1 (p B) (dec xx)))))
 
 
 (defn perlin2 [x y]
@@ -158,6 +191,7 @@
                 (linear-erp u
                       (grad3 (p (+ AB 1)) xx (- yy 1) (- zz 1))
                       (grad3 (p (+ BB 1)) (- xx 1) (- yy 1) (- zz 1)))))))
+
 
 (defn perlin4 [x y z w]
   (let [l linear-erp
@@ -219,18 +253,9 @@
                 (grad4 (p (inc ABB)) xx (dec yy) (dec zz) (dec ww))
                 (grad4 (p (inc BBB)) (dec xx) (dec yy) (dec zz) (dec ww))))))))
 
-
 (defn perlin
   ([x] (perlin1 x))
   ([x y] (perlin2 x y))
   ([x y z] (perlin3 x y z))
   ([x y z w] (perlin4 x y z w)))
 
-
-
-;testing
-(mapv (fn [y]
-       (mapv (fn [x]
-              (Math/round (* 6 (perlin x y))))
-            (range -1 1 0.1)))
-     (range -1 1 0.1))

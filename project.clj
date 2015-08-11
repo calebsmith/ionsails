@@ -8,4 +8,4 @@
   :main ^:skip-aot ionsails.core
   :target-path "target/%s"
   :profiles {:uberjar {:aot :all}
-             :dev {:dependencies [[net.mikera/clisk "0.10.0"]]}})
+             :dev {:dependencies []}})
