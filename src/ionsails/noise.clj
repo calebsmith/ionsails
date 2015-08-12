@@ -62,7 +62,7 @@
 (defn fade [t]
   (* t t t (+ (* t (- (* t 6) 15.0)) 10.0)))
 
-(defn linear-erp [t a b]
+(defn lerp [t a b]
   (+ a (* t (- b a))))
 
 (defn grad1 [hash-val x]
@@ -79,39 +79,7 @@
      (* x Gx)
      (* y Gy))))
 
-(defn grad3 [hash-val x y z]
-  (let [h (bit-and hash-val 15)
-        Gx ((G3 h) 0)
-        Gy ((G3 h) 1)
-        Gz ((G3 h) 2)]
-    (+
-     (* x Gx)
-     (* y Gy)
-     (* z Gz))))
-
-
-(defn grad4 [hash-val x y z w]
-  (let [h (bit-and hash-val 31)
-        Gx ((G4 h) 0)
-        Gy ((G4 h) 1)
-        Gz ((G4 h) 2)
-        Gw ((G4 h) 3)]
-    (+
-     (* x Gx)
-     (* y Gy)
-     (* z Gz)
-     (* w Gw))))
-
-(defn grad
-  [hash x y z]
-  (let [h (bit-and hash 15)
-        u (if (< h 8) x y)
-        v (if (< h 4) y (if (or (= h 12) (= h 14)) x z))]
-    (+ (if (= (bit-and h 1) 0) u (- u))
-       (if (= (bit-and h 2) 0) v (- v)))))
-
-
-(defn grad-prime
+(defn grad3
   [hash-val x y z]
   (let [xn (- x)
         yn (- y)
@@ -134,13 +102,25 @@
           14 (+ xn y)
           15 (+ yn zn))))
 
+(defn grad4 [hash-val x y z w]
+  (let [h (bit-and hash-val 31)
+        Gx ((G4 h) 0)
+        Gy ((G4 h) 1)
+        Gz ((G4 h) 2)
+        Gw ((G4 h) 3)]
+    (+
+     (* x Gx)
+     (* y Gy)
+     (* z Gz)
+     (* w Gw))))
+
 (defn perlin1 [x]
   (let [X (bit-and (int x) 255)
         xx (- x (int x))
         u (fade xx)
         A (p X)
         B (p (+ X 1))]
-    (linear-erp u (grad1 (p A) xx) (grad1 (p B) (dec xx)))))
+    (lerp u (grad1 (p A) xx) (grad1 (p B) (dec xx)))))
 
 
 (defn perlin2 [x y]
@@ -152,11 +132,11 @@
         v (fade yy)
         A (+ (p X) Y)
         B (+ (p (+ X 1)) Y)]
-    (linear-erp v
-        (linear-erp u
+    (lerp v
+        (lerp u
               (grad2 (p A) xx yy)
               (grad2 (p B) (- xx 1) yy))
-        (linear-erp u
+        (lerp u
               (grad2 (p (+ 1 A)) xx (- yy 1))
               (grad2 (p (+ 1 B)) (- xx 1) (- yy 1))))))
 
@@ -176,25 +156,25 @@
         B (+ (p (+ X 1)) Y)
         BA (+ (p B) Z)
         BB (+ (p (+ B 1)) Z)]
-    (linear-erp w
-          (linear-erp v
-                (linear-erp u
+    (lerp w
+          (lerp v
+                (lerp u
                       (grad3 (p AA) xx yy zz)
                       (grad3 (p BA) (- xx 1) yy zz))
-                (linear-erp u
+                (lerp u
                       (grad3 (p AB) xx (- yy 1) zz)
                       (grad3 (p BB) (- xx 1) (- yy 1) zz)))
-          (linear-erp v
-                (linear-erp u
+          (lerp v
+                (lerp u
                       (grad3 (p (+ AA 1)) xx yy (- zz 1))
                       (grad3 (p (+ BA 1)) (- xx 1) yy (- zz 1)))
-                (linear-erp u
+                (lerp u
                       (grad3 (p (+ AB 1)) xx (- yy 1) (- zz 1))
                       (grad3 (p (+ BB 1)) (- xx 1) (- yy 1) (- zz 1)))))))
 
 
 (defn perlin4 [x y z w]
-  (let [l linear-erp
+  (let [l lerp
         X (bit-and (int x) 255)
         Y (bit-and (int y) 255)
         Z (bit-and (int z) 255)
