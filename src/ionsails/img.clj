@@ -53,7 +53,6 @@
          (vector x y))))
 
 
-
 (defn draw-to-img []
   (let [height 200
         width 200
@@ -65,31 +64,10 @@
            (get-values width height)))
     img))
 
+; testing scripts
+
 (defn go []
   (makeitso (draw-to-img) "resources/test.png"))
 
 (defn go-1d []
   (makeitso (draw-to-img-1d) "resources/test.png"))
-
-
-
-
-
-
-(comment
-  "
-  public double OctavePerlin(double x, double y, double z, int octaves, double persistence) {
-      double total = 0;
-      double frequency = 1;
-      double amplitude = 1;
-      double maxValue = 0;  // Used for normalizing result to 0.0 - 1.0
-      for(int i=0;i<octaves;i++) {
-          total += perlin(x * frequency, y * frequency, z * frequency) * amplitude;
-          maxValue += amplitude;
-          amplitude *= persistence;
-          frequency *= 2;
-      }
-      return total/maxValue;
-  }
-  "
-)

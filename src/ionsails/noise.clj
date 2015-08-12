@@ -65,6 +65,20 @@
 (defn lerp [t a b]
   (+ a (* t (- b a))))
 
+(defn cos-erp [x a b]
+  (let [ft (* x Math/PI)
+        f (* (- 1 (Math/cos ft)) 0.5)]
+    (+ (* a (- 1 f)) (* b f))))
+
+
+;  function Cosine_Interpolate(a, b, x)
+;    ft = x * 3.1415927
+;    f = (1 - cos(ft)) * .5
+;
+;    return  a*(1-f) + b*f
+;  end of function
+
+
 (defn grad1 [hash-val x]
   (let [h (bit-and hash-val 1)
         Gx (G1 h)]
@@ -239,3 +253,26 @@
   ([x y z] (perlin3 x y z))
   ([x y z w] (perlin4 x y z w)))
 
+
+
+
+
+
+
+(comment
+  "
+  public double OctavePerlin(double x, double y, double z, int octaves, double persistence) {
+      double total = 0;
+      double frequency = 1;
+      double amplitude = 1;
+      double maxValue = 0;  // Used for normalizing result to 0.0 - 1.0
+      for(int i=0;i<octaves;i++) {
+          total += perlin(x * frequency, y * frequency, z * frequency) * amplitude;
+          maxValue += amplitude;
+          amplitude *= persistence;
+          frequency *= 2;
+      }
+      return total/maxValue;
+  }
+  "
+)
