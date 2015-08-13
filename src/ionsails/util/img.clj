@@ -31,9 +31,8 @@
 (defn draw-to-img [width height noise-func]
   (let [img (make-img width height)]
     (doall
-      (map (fn [value]
-             (let [{x :x y :y color :value} value]
-               (pset img x y color color color)))
+      (map (fn [[x y color]]
+             (pset img x y color color color))
            (noise-func width height)))
     img))
 

@@ -254,25 +254,15 @@
   ([x y z w] (perlin4 x y z w)))
 
 
+(defn power-series [base] (map #(Math/pow base %) (range)))
 
-
-
-
-
-(comment
-  "
-  public double OctavePerlin(double x, double y, double z, int octaves, double persistence) {
-      double total = 0;
-      double frequency = 1;
-      double amplitude = 1;
-      double maxValue = 0;  // Used for normalizing result to 0.0 - 1.0
-      for(int i=0;i<octaves;i++) {
-          total += perlin(x * frequency, y * frequency, z * frequency) * amplitude;
-          maxValue += amplitude;
-          amplitude *= persistence;
-          frequency *= 2;
-      }
-      return total/maxValue;
-  }
-  "
-)
+(defn octave-perlin [x y z octaves persistance]
+  (let [freqs (take octaves (power-series 2))
+        amps (take octaves (power-series persistance))
+        freqs-amps (map vector freqs amps)
+        total (reduce +
+                      (map (fn [[freq amp]]
+                             (* amp (perlin (* x freq) (* y freq) (* z freq))))
+                           freqs-amps))
+        maxval (reduce + amps)]
+    (/ total maxval)))
