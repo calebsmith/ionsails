@@ -12,7 +12,7 @@
 (defn get-noise2 [x y]
   (let [factor 32
         amp 16]
-    (int (* 8 (+ (/ factor 2) (* amp (noise/octave-perlin (/ x 128) (/ y 128) (/ x 128) 5 0.5)))))))
+    (int (* 8 (+ (/ factor 2) (* amp (noise/octave-perlin (/ x 256) (/ y 256) (/ x 256) 5 0.5)))))))
 
 
 (defn get-noise [x]
@@ -21,9 +21,8 @@
 
 
 (defn get-values [width height]
-  (map (fn [vec] (let [x (first vec)
-                       y (second vec)]
-                   [x y (bound (get-noise2 x y) 0 255)]))
+  (map (fn [[x y]]
+         [x y (bound (get-noise2 x y) 0 255)])
        (for [y (range height)
              x (range width)]
          (vector x y))))

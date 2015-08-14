@@ -41,7 +41,7 @@
 
 (def draw-to-img-1d-example (partial draw-to-img-1d 800 400 gen/get-noise))
 
-(def draw-to-img-example (partial draw-to-img 200 200 gen/get-values))
+(def draw-to-img-example (partial draw-to-img 500 500 gen/get-values))
 
 (defn go []
   (makeitso (draw-to-img-example) "resources/test.png"))
