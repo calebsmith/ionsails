@@ -1,4 +1,4 @@
-(ns ionsails.noise)
+(ns ionsails.noise.perlin)
 
 
 ;N.B. - Many ideas a snippets taken from https://github.com/indy/perlin/,
@@ -70,19 +70,10 @@
         f (* (- 1 (Math/cos ft)) 0.5)]
     (+ (* a (- 1 f)) (* b f))))
 
-
-;  function Cosine_Interpolate(a, b, x)
-;    ft = x * 3.1415927
-;    f = (1 - cos(ft)) * .5
-;
-;    return  a*(1-f) + b*f
-;  end of function
-
-
 (defn grad1 [hash-val x]
   (let [h (bit-and hash-val 1)
         Gx (G1 h)]
-     (* x Gx)))
+    (* x Gx)))
 
 
 (defn grad2 [hash-val x y]
@@ -99,22 +90,22 @@
         yn (- y)
         zn (- z)]
     (condp = (bit-and hash-val 15)
-          0 (+ x y)
-          1 (+ xn y)
-          2 (+ x yn)
-          3 (+ xn yn)
-          4 (+ x z)
-          5 (+ xn z)
-          6 (+ x zn)
-          7 (+ xn zn)
-          8 (+ y z)
-          9 (+ yn z)
-          10 (+ y zn)
-          11 (+ yn zn)
-          12 (+ x y)
-          13 (+ yn z)
-          14 (+ xn y)
-          15 (+ yn zn))))
+      0 (+ x y)
+      1 (+ xn y)
+      2 (+ x yn)
+      3 (+ xn yn)
+      4 (+ x z)
+      5 (+ xn z)
+      6 (+ x zn)
+      7 (+ xn zn)
+      8 (+ y z)
+      9 (+ yn z)
+      10 (+ y zn)
+      11 (+ yn zn)
+      12 (+ x y)
+      13 (+ yn z)
+      14 (+ xn y)
+      15 (+ yn zn))))
 
 (defn grad4 [hash-val x y z w]
   (let [h (bit-and hash-val 31)
@@ -128,7 +119,7 @@
      (* z Gz)
      (* w Gw))))
 
-(defn perlin1 [x]
+(defn raw-perlin1 [x]
   (let [X (bit-and (int x) 255)
         xx (- x (int x))
         u (fade xx)
@@ -137,7 +128,7 @@
     (lerp u (grad1 (p A) xx) (grad1 (p B) (dec xx)))))
 
 
-(defn perlin2 [x y]
+(defn raw-perlin2 [x y]
   (let [X (bit-and (int x) 255)
         Y (bit-and (int y) 255)
         xx (- x (int x))
@@ -147,14 +138,14 @@
         A (+ (p X) Y)
         B (+ (p (+ X 1)) Y)]
     (lerp v
-        (lerp u
-              (grad2 (p A) xx yy)
-              (grad2 (p B) (- xx 1) yy))
-        (lerp u
-              (grad2 (p (+ 1 A)) xx (- yy 1))
-              (grad2 (p (+ 1 B)) (- xx 1) (- yy 1))))))
+          (lerp u
+                (grad2 (p A) xx yy)
+                (grad2 (p B) (- xx 1) yy))
+          (lerp u
+                (grad2 (p (+ 1 A)) xx (- yy 1))
+                (grad2 (p (+ 1 B)) (- xx 1) (- yy 1))))))
 
-(defn perlin3 [x y z]
+(defn raw-perlin3 [x y z]
   (let [X (bit-and (int x) 255)
         Y (bit-and (int y) 255)
         Z (bit-and (int z) 255)
@@ -187,7 +178,7 @@
                       (grad3 (p (+ BB 1)) (- xx 1) (- yy 1) (- zz 1)))))))
 
 
-(defn perlin4 [x y z w]
+(defn raw-perlin4 [x y z w]
   (let [l lerp
         X (bit-and (int x) 255)
         Y (bit-and (int y) 255)
@@ -247,22 +238,55 @@
                 (grad4 (p (inc ABB)) xx (dec yy) (dec zz) (dec ww))
                 (grad4 (p (inc BBB)) (dec xx) (dec yy) (dec zz) (dec ww))))))))
 
+(defn raw-perlin
+  "Givex 1 to 4 arguments, call the appropriate perlin noise function for that number
+  of dimensions. These are 'raw' noise values that aren't sampled against a given rate
+  or scaled to fill an expected range"
+  ([x] (raw-perlin1 x))
+  ([x y] (raw-perlin2 x y))
+  ([x y z] (raw-perlin3 x y z))
+  ([x y z w] (raw-perlin4 x y z w)))
+
+
+(defn rated-args [rate args]
+  (map #(/ % rate) args))
+
+(defn rated-perlin
+  "Samples perlin noise functions against a given sample rate. This is used to avoid
+  the problem of sampling perlin with integer values, which always returns 0"
+  [rate & args]
+  (apply raw-perlin (rated-args rate args)))
+
+
+(def perlin-range-scale
+  "Adjusts the scale of raw perlin noise return values so the range is -1 to 1
+  for all dimensions. Each value in this vector corresponds with perlin in 1 dimension,
+  2 dimensions, and so on up to 4."
+  [
+   2
+   (Math/sqrt 2)
+   (Math/sqrt 3)
+   1])
+
+
+(defn clamp [minimum maximum value]
+  "Given a minimum and maximum, returns a given value that doesn't exceed these bounds"
+  (if (> value maximum)
+    maximum
+    (if (< value minimum)
+      minimum
+      value)))
+
+(def clamp-1
+  "A clamp for scaled perlin noise functions, which have a [-1, 1] range"
+  (partial clamp -1.0 1.0))
+
+(defn scaled-perlin [& args]
+  (let [scale (perlin-range-scale (- (count args) 1))]
+    (clamp-1 (* scale (apply raw-perlin args)))))
+
 (defn perlin
-  ([x] (perlin1 x))
-  ([x y] (perlin2 x y))
-  ([x y z] (perlin3 x y z))
-  ([x y z w] (perlin4 x y z w)))
-
-
-(defn power-series [base] (map #(Math/pow base %) (range)))
-
-(defn octave-perlin [x y z octaves persistance]
-  (let [freqs (take octaves (power-series 2))
-        amps (take octaves (power-series persistance))
-        freqs-amps (map vector freqs amps)
-        total (reduce +
-                      (map (fn [[freq amp]]
-                             (* amp (perlin (* x freq) (* y freq) (* z freq))))
-                           freqs-amps))
-        maxval (reduce + amps)]
-    (/ total maxval)))
+  "Takes a rate for sampling rate, and 1 to 4 additional arguments and returns the perlin noise
+  function called with that sample rate, and scaled for the number of dimensions"
+  [rate & args]
+  (apply scaled-perlin (rated-args rate args)))
