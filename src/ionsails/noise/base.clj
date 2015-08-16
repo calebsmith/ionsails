@@ -1,4 +1,4 @@
-(ns ionsails.noise.perlin)
+(ns ionsails.noise.base)
 
 
 ;N.B. - Many ideas a snippets taken from https://github.com/indy/perlin/,
@@ -69,6 +69,15 @@
   (let [ft (* x Math/PI)
         f (* (- 1 (Math/cos ft)) 0.5)]
     (+ (* a (- 1 f)) (* b f))))
+
+
+;  function Cosine_Interpolate(a, b, x)
+;    ft = x * 3.1415927
+;    f = (1 - cos(ft)) * .5
+;
+;    return  a*(1-f) + b*f
+;  end of function
+
 
 (defn grad1 [hash-val x]
   (let [h (bit-and hash-val 1)
@@ -291,23 +300,3 @@
   [rate & args]
   (apply scaled-perlin (rated-args rate args)))
 
-(defn power-series
-  "Given a base, returns the lazy sequence of powers from 0"
-  [base]
-  (map #(Math/pow base %) (range)))
-
-(defn octave-perlin
-  "Given a sample rate, number of octaves, a 'persistance' and 1 to 4 arguments
-  for each dimenion, returns a sampled/scaled perlin noise with a sample for each 'octave',
-  each applied to the previous depending on the amount of 'persistance'"
-  [octaves persistance rate & args]
-  (let [freqs (take octaves (power-series 2))
-        amps (take octaves (power-series persistance))
-        freqs-amps (map vector freqs amps)
-        total (reduce +
-                      (map (fn [[freq amp]]
-                             (let [freqed-args (map #(* % freq) args)]
-                               (* amp (apply perlin (cons rate freqed-args)))))
-                           freqs-amps))
-        maxval (reduce + amps)]
-    (/ total maxval)))
