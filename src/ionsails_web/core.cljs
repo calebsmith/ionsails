@@ -11,10 +11,9 @@
 (defn ^:export main
   "Application entry point"
   []
-  (let [dom-root (.getElementById js/document "app")]
-    (swap! world assoc :started true)
-    (event/initialize world)
-    (render/render world dom-root)))
+  (swap! world assoc :started true)
+  (event/initialize world)
+  (render/render world (.getElementById js/document "app")))
 
 ;; Initial call to main
 (when-not (get @world :started) (main))
