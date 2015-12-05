@@ -1,12 +1,14 @@
 (defproject ionsails-web "0.1.0-SNAPSHOT"
-  :description "FIXME: write this!"
-  :url "http://example.com/FIXME"
+  :description "Ionsails"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
 
   :dependencies [[org.clojure/clojure "1.7.0"]
                  [org.clojure/clojurescript "1.7.170"]
-                 [org.clojure/core.async "0.2.374"]]
+                 [org.clojure/core.async "0.2.374"]
+                 [quiescent "0.2.0-RC2"
+                  :exclusions [cljsjs/react cljsjs/react-with-addons]]
+                 [cljsjs/react-with-addons "0.13.3-0"]]
 
   :plugins [[lein-cljsbuild "1.1.1"]
             [lein-figwheel "0.5.0-1"]]
@@ -40,8 +42,7 @@
                            :optimizations :advanced
                            :pretty-print false}}]}
 
-  :figwheel {;; :http-server-root "public" ;; default and assumes "resources"
-             :server-port 3449 ;; default
+  :figwheel {:server-port 3449
              :server-ip "127.0.0.1"
              :css-dirs ["resources/public/css"] ;; watch and update CSS
 
@@ -66,6 +67,4 @@
              ;; if you want to disable the REPL
              ;; :repl false
 
-             ;; to configure a different figwheel logfile path
-             ;; :server-logfile "tmp/logs/figwheel-logfile.log"
              })
