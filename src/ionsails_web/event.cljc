@@ -6,6 +6,8 @@
 
 #?(:cljs (def ^:private global-listeners (atom {})))
 
+#?(:cljs (defonce ^:private event-chans (atom {})))
+
 #?(:cljs
    (defn- add-global-listener
      "Add a global listener for a particular event topic. Handler must
@@ -31,30 +33,30 @@
    (defn- register-listeners
      "Subscribes all the globally registered listeners to the
   event pub channel"
-     [world]
-     (let [update-pub (get-in @world [:chans :event-pub])
-           update-ch (get-in @world [:chans :event-chan])]
+     [world event-chans]
+     (let [update-pub (get @event-chans :event-pub)
+           update-ch (get @event-chans :event-chan)]
        (doseq [[topic handler] (vals @global-listeners)]
          (let [c (chan)]
            (sub update-pub topic c)
            (go-loop []
-             (handler world update-ch (<! c))
+             (handler world (dissoc (<! c) :topic))
              (recur)))))))
 
 #?(:cljs
    (defn reset-listeners
      [world]
-     (let [update-pub (get-in @world [:chans :event-pub])]
+     (let [update-pub (get @event-chans :event-pub)]
        (unsub-all update-pub)
-       (register-listeners world))))
+       (register-listeners world event-chans))))
 
 #?(:cljs
    (defn send
      "Send a message to the given topic. Returns the message (mostly
       so it can return a truthful object when used as the body of an event
       handler)"
-     [world topic message]
-     (let [update-ch (get-in @world [:chans :event-chan])]
+     [topic message]
+     (let [update-ch (get @event-chans :event-chan)]
        (put! update-ch (assoc message :topic topic))
        message)))
 
@@ -63,6 +65,6 @@
      [world]
      (let [update-ch (chan)
            update-pub (pub update-ch :topic)]
-       (swap! world assoc-in [:chans :event-chan] update-ch)
-       (swap! world assoc-in [:chans :event-pub] update-pub))
-     (register-listeners world)))
+       (swap! event-chans assoc :event-chan update-ch)
+       (swap! event-chans assoc :event-pub update-pub))
+     (register-listeners world event-chans)))
