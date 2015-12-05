@@ -1,5 +1,6 @@
 (ns ionsails.util.img
   (:require [ionsails.gen :as gen]))
+;; Generates image files or buffered images from noise functions for testing
 
 (use '[clojure.java.shell :only [sh]])
 
