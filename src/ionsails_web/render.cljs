@@ -1,16 +1,14 @@
 (ns ionsails-web.render
   (:require [quiescent.core :as q :include-macros true]
-            [quiescent.dom :as d]))
+            [quiescent.dom :as d]
+            [ionsails-web.ui.components.root :as root]))
 
-(q/defcomponent Root
-  "The root of the application"
-  [world]
-  (d/div {}
-         (d/h2 {} "Hi")))
+(def root-components
+  {:root root/RootComponent})
 
 (defn render
   "Initiate rendering of the application"
-  [world dom-root]
+  [world dom-root comp-kw]
   (do
-    (q/render (Root nil) dom-root)
-    (.requestAnimationFrame js/window #(render world dom-root))))
+    (q/render ((comp-kw root-components) world) dom-root)
+    (.requestAnimationFrame js/window #(render world dom-root comp-kw))))

@@ -13,7 +13,7 @@
   []
   (swap! world assoc :started true)
   (event/initialize world)
-  (render/render world (.getElementById js/document "app")))
+  (render/render world (.getElementById js/document "app") :root))
 
 ;; Initial call to main
 (when-not (get @world :started) (main))
