@@ -7,7 +7,6 @@
 }
 
 /* Console component styles */
-
 .console {
     width: 640px;
     height: 480px;
@@ -15,6 +14,8 @@
     background-color: black;
     overflow: auto;
     color: white;
+    margin: 0px;
+    padding: 0px;
 }
 
 .console ul {
@@ -32,4 +33,16 @@
 }
 .console li.warning {
     color: red;
+}
+
+/* Command line component styles */
+.command-line input {
+    width: 640px;
+    height: 40px;
+    paddding: 15px;
+    margin: 0px;
+    font-size: 20px;
+    background-color: black;
+    color: #DDD;
+    border: 1px solid lightgray;
 }
