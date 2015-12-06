@@ -3,9 +3,14 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
 
-  :dependencies [[org.clojure/clojure "1.7.0"]
+  :dependencies [
+                 ;; Core libs
+                 [org.clojure/clojure "1.7.0"]
                  [org.clojure/clojurescript "1.7.170"]
                  [org.clojure/core.async "0.2.374"]
+                 ;; Data/algorithm libs
+                 [amalloy/ring-buffer "1.2"]
+                 ;; UI libs
                  [quiescent "0.2.0-RC2"
                   :exclusions [cljsjs/react cljsjs/react-with-addons]]
                  [cljsjs/react-with-addons "0.13.3-0"]

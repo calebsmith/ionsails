@@ -1,4 +1,4 @@
-/* some style */
+/* Network graph component styles */
 
 .network-graph {
     width: 600px;
@@ -6,3 +6,30 @@
     border: 1px solid lightgray;
 }
 
+/* Console component styles */
+
+.console {
+    width: 640px;
+    height: 480px;
+    border: 1px solid lightgray;
+    background-color: black;
+    overflow: auto;
+    color: white;
+}
+
+.console ul {
+    margin: 0px;
+    padding: 5px 10px;
+}
+
+.console li {
+    style: none;
+    list-style-type: none;
+}
+
+.console li.info {
+    color: white;
+}
+.console li.warning {
+    color: red;
+}

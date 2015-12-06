@@ -10,5 +10,5 @@
   "Initiate rendering of the application"
   [world dom-root comp-kw]
   (do
-    (q/render ((comp-kw root-components) world) dom-root)
+    (q/render ((comp-kw root-components) @world world) dom-root)
     (.requestAnimationFrame js/window #(render world dom-root comp-kw))))

@@ -6,7 +6,6 @@
 (declare test-network)
 
 (q/defcomponent Graph
-  "The root of the application UI"
   :on-render (fn [_ world] (test-network world))
   [world]
   (d/div {:className "network-graph" :id "graph1"}))
