@@ -1,9 +1,8 @@
 (ns ionsails-web.ui.components.command
-  (:require [quiescent.core :as q :include-macros true]
+  (:require [ionsails-web.event :as event :refer-macros [deflistener]]
+            [quiescent.core :as q :include-macros true]
             [quiescent.dom :as d]
-            [quiescent.dom.uncontrolled :as du]
-            [ionsails-web.event :as event :refer-macros [deflistener]]))
-
+            [quiescent.dom.uncontrolled :as du]))
 
 (defn handle-enter
   [completions elm inp-elm evt val]
@@ -40,7 +39,8 @@
          (du/input {:id (str "command-line-input-" elm-id-num)})))
 
 (comment 
-  (swap! ionsails-web.core/world assoc :command-completions ["look"])
+  (swap! ionsails-web.core/world assoc :command-completions 
+         (sorted-map :look 3 :lookat 4 :lo 2 :where))
 
-
+  ;;; use trie for lookup
   )
