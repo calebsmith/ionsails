@@ -8,7 +8,8 @@
                  [org.clojure/core.async "0.2.374"]
                  [quiescent "0.2.0-RC2"
                   :exclusions [cljsjs/react cljsjs/react-with-addons]]
-                 [cljsjs/react-with-addons "0.13.3-0"]]
+                 [cljsjs/react-with-addons "0.13.3-0"]
+                 [cljsjs/vis "4.9.0-2"]]
 
   :plugins [[lein-cljsbuild "1.1.1"]
             [lein-figwheel "0.5.0-1"]]
