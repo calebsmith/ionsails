@@ -17,7 +17,7 @@
   (do 
     (.preventDefault evt)
     (when-let [hints (trie/lookup completions val)]
-      (if (= (count hints) 1)
+      (when (= (count hints) 1)
         (set! (.-value inp-elm) (first hints))))))
 
 (def handler-lookup
@@ -40,8 +40,8 @@
     (.addEventListener div-elm "keydown" #(key-down-listener completions div-elm inp-elm %) false)))
 
 (q/defcomponent CommandLine
-  :on-mount (fn [_ completions elm-id-num]
-              (event-grab completions elm-id-num))
+  :on-render (fn [_ completions _ elm-id-num]
+               (event-grab completions elm-id-num))
   [completions elm-id-num]
   (d/div {:id (str "command-line-" elm-id-num) :className "command-line"}
          (du/input {:id (str "command-line-input-" elm-id-num)})))
