@@ -31,6 +31,11 @@
 .console li.info {
     color: white;
 }
+
+.console li.echo {
+    color: #999;
+}
+
 .console li.warning {
     color: red;
 }

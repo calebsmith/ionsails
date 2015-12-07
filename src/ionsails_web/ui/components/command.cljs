@@ -1,20 +1,24 @@
 (ns ionsails-web.ui.components.command
   (:require [ionsails-web.event :as event :refer-macros [deflistener]]
             [ionsails-web.util.trie :as trie]
+            [ionsails-web.logic.command :as cmd]
             [quiescent.core :as q :include-macros true]
             [quiescent.dom :as d]
             [quiescent.dom.uncontrolled :as du]))
 
 (defn handle-enter
   [completions elm inp-elm evt val]
-  (event/send :ionsails-web.logic.command/command-enter {:text val})
+  (cmd/handle val)
+  (event/send :console {:category :echo :text (str "=> " val)})
   (set! (.-value inp-elm) ""))
 
 (defn handle-tab
   [completions elm inp-elm evt val]
-  (.preventDefault evt)
-  (when-let [hint (first (trie/lookup completions val))]
-    (set! (.-value inp-elm) hint)))
+  (do 
+    (.preventDefault evt)
+    (when-let [hints (trie/lookup completions val)]
+      (if (= (count hints) 1)
+        (set! (.-value inp-elm) (first hints))))))
 
 (def handler-lookup
   {9 handle-tab

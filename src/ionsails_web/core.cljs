@@ -1,6 +1,5 @@
 (ns ionsails-web.core
   (:require [ionsails-web.state :as state]
-            [ionsails-web.logic.command]
             [ionsails-web.event :as event :refer-macros [deflistener]]
             [ionsails-web.render :as render]))
 
