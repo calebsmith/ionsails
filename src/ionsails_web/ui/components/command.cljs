@@ -1,16 +1,20 @@
 (ns ionsails-web.ui.components.command
   (:require [ionsails-web.event :as event :refer-macros [deflistener]]
+            [ionsails-web.util.trie :as trie]
             [quiescent.core :as q :include-macros true]
             [quiescent.dom :as d]
             [quiescent.dom.uncontrolled :as du]))
 
 (defn handle-enter
   [completions elm inp-elm evt val]
+  (event/send :ionsails-web.logic.command/command-enter {:text val})
   (set! (.-value inp-elm) ""))
 
 (defn handle-tab
   [completions elm inp-elm evt val]
-  (.preventDefault evt)) 
+  (.preventDefault evt)
+  (when-let [hint (first (trie/lookup completions val))]
+    (set! (.-value inp-elm) hint)))
 
 (def handler-lookup
   {9 handle-tab
@@ -38,9 +42,10 @@
   (d/div {:id (str "command-line-" elm-id-num) :className "command-line"}
          (du/input {:id (str "command-line-input-" elm-id-num)})))
 
-(comment 
-  (swap! ionsails-web.core/world assoc :command-completions 
-         (sorted-map :look 3 :lookat 4 :lo 2 :where))
 
-  ;;; use trie for lookup
+(comment
+
+  ;; Should be put in state where initial data is set
+  (swap! ionsails-web.core/world assoc :command-completions (trie/build-trie ["look" "go" "where" "when"]))
+
   )
