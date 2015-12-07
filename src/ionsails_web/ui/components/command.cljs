@@ -8,9 +8,10 @@
 
 (defn handle-enter
   [completions elm inp-elm evt val]
-  (cmd/handle val)
-  (event/send :console {:category :echo :text (str "=> " val)})
-  (set! (.-value inp-elm) ""))
+  (when (not= val "")
+    (cmd/handle val)
+    (event/send :console {:category :echo :text (str "=> " val)})
+    (set! (.-value inp-elm) "")))
 
 (defn handle-tab
   [completions elm inp-elm evt val]
