@@ -1,100 +1,34 @@
-(ns ionsails-web.util.trie
-  (:require [clojure.string :as string]))
+(ns ionsails-web.util.trie)
 
+(defn- add-to-trie [trie x]
+  (assoc-in trie x (merge (get-in trie x) {:terminal true})))
 
-(def names ["Alan" "Albert" "Bob" "Martha"])
+(defn- flatten-map
+  ([form]
+   (into {} (flatten-map form nil)))
+  ([form pre]
+   (mapcat (fn [[k v]]
+             (let [prefix (if pre (str pre (name k)) (name k))]
+               (if (and (map? v)
+                        (not (contains? v :terminal)))
+                 (flatten-map v prefix)
+                 (if (not= k :terminal)
+                   [[prefix v]]
+                   []))))
+           form)))
 
-(def words ["dirt" "ants" "zoo" "zookeeper" "anteater"])
+(defn in-trie? [trie x]
+  "Returns true if the value x exists in the specified trie."
+  (contains? (get-in trie (vec x)) :terminal))
 
-;; From closure.contrib, but missing from clojure 1.4.0 for some reason.
-(defn dissoc-in
-  "Dissociates an entry from a nested associative structure returning a new
-  nested structure. keys is a sequence of keys. Any empty maps that result
-  will not be present in the new structure."
-  [m [k & ks :as keys]]
-  (if ks
-    (if-let [nextmap (get m k)]
-      (let [newmap (dissoc-in nextmap ks)]
-        (if (seq newmap)
-          (assoc m k newmap)
-          (dissoc m k)))
-      m)
-    (dissoc m k)))
+(defn lookup [trie prefix]
+  "Returns a list of matches with the prefix specified in the trie specified."
+  (let [sub-trie (get-in trie (vec prefix))
+        suggestions (map #(str prefix %) (keys (flatten-map sub-trie)))]
+    (if (in-trie? trie prefix)
+      (conj suggestions prefix)
+      suggestions)))
 
-(defn word-seq
-  [word]
-  (map-indexed (fn [i l] (subs word 0 (inc i))) word))
-
-(defn lookup-tree
-  [T word & {:keys [parentKeys] :or {parentKeys []}}]
-  (if-let
-      [matchedPrefix (first (filter (fn [prefix] (get T prefix)) (word-seq word)))]
-    (let [subT (get T matchedPrefix)]
-                                        ; (println "Match: " matchedPrefix (get T matchedPrefix) (conj parentKeys matchedPrefix))
-      (lookup-tree subT
-                   (subs word (count matchedPrefix))
-                   :parentKeys (conj parentKeys matchedPrefix)))
-    (do ;(println "No match: " word)
-      [T (conj parentKeys word)])))
-
-(defn common-prefix-length
-  [word1 word2]
-  (loop [i 0]
-    (if (= (get word1 i) (get word2 i))
-      (recur (inc i))
-      i)))
-
-(defn common-sibling
-  [subT parentKeys]
-                                        ; (println "Common siblings? " (keys subT) parentKeys)
-  (if-let [siblingKeys (keys subT)]
-    (if-let [sibling (first (filter
-                             (fn [key] (< 0 (common-prefix-length key (last parentKeys))))
-                             siblingKeys))]
-      sibling)))
-
-(defn insert
-  [T word]
-  (let [[subT parentKeys] (lookup-tree T word)]
-                                        ; (println "\nInserting " word parentKeys subT)
-    (if-let [sibling (common-sibling subT parentKeys)]
-      (let [commonPrefixLength (common-prefix-length (last parentKeys) sibling)
-            taillessParentKeys (vec (take (dec (count parentKeys)) parentKeys))
-            newKeys (conj taillessParentKeys
-                          (subs (last parentKeys) 0 commonPrefixLength))
-            oldKeys (conj taillessParentKeys
-                          sibling)]
-                                        ; (println "New keys: " newKeys oldKeys sibling)
-        (assoc-in (dissoc-in T oldKeys) newKeys {
-                                                 (subs (last parentKeys) commonPrefixLength) {}
-                                                 (subs sibling commonPrefixLength) {}
-                                                 }))
-      (assoc-in T parentKeys {}))))
-
-(defn assemble-nodes
-  [tree prefix]
-  (flatten (map (fn [t]
-                  (if (empty? (tree t))
-                    (apply str (concat prefix t))
-                    (assemble-nodes (tree t) (concat prefix t))))
-                (keys tree))))
-
-(defn lookup
-  [T word & {:keys [limit] :or {limit 10}}]
-  (println "\nLooking up: " word)
-  (let [word (string/lower-case word)
-        tree (get (lookup-tree T word) 0)]
-    (take limit (reverse (assemble-nodes tree word)))))
-
-(def N (reduce insert {} names))
-
-(def W (reduce insert {} words))
-
-(comment 
-  (lookup N "Al")
-
-  (lookup N "Bo")
-
-  (lookup W "Intell" :limit 3)
-
-  (lookup W "Ear" :limit 3))
+(defn build-trie [coll]
+  "Builds a trie over the values in the specified seq coll."
+  (reduce add-to-trie {} coll))
