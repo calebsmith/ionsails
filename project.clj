@@ -10,6 +10,7 @@
                  [org.clojure/core.async "0.2.374"]
                  ;; Data/algorithm libs
                  [amalloy/ring-buffer "1.2"]
+                 [brute "0.3.0"]
                  ;; UI libs
                  [quiescent "0.2.0-RC2"
                   :exclusions [cljsjs/react cljsjs/react-with-addons]]

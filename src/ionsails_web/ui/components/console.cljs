@@ -26,7 +26,8 @@
 
 (comment
 
-  (event/send :console {:text "Hi" :category "info"})
-  (event/send :console {:text "DEATH IMMINENT" :category :warning})
+  (event/send :console {:text "Before you is a mailbox" :category "info"})
+
+  (event/send :console {:text "DEATH IS IMMINENT" :category :warning})
 
   )

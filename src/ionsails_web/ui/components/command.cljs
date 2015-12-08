@@ -46,11 +46,3 @@
   [completions elm-id-num]
   (d/div {:id (str "command-line-" elm-id-num) :className "command-line"}
          (du/input {:id (str "command-line-input-" elm-id-num)})))
-
-
-(comment
-
-  ;; Should be put in state where initial data is set
-  (swap! ionsails-web.core/world assoc :command-completions (trie/build-trie ["look" "go" "where" "when"]))
-
-  )
