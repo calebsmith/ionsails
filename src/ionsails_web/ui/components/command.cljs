@@ -9,7 +9,7 @@
 (defn handle-enter
   [completions elm inp-elm evt val]
   (when (not= val "")
-    (cmd/handle val)
+    (event/send :command {:command val})
     (event/send :console {:category :echo :text (str "=> " val)})
     (set! (.-value inp-elm) "")))
 
