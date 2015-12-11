@@ -12,8 +12,11 @@
                 (e/create-location "bar" "A dive bar" 1 2 1)
                 (e/create-location "garage" "A spaceport garage" 1 4 1))
         loc (first (ent/get-all-entities-with-component sys c/CoorContainer))
+        loc2 (second (ent/get-all-entities-with-component sys c/CoorContainer))
         area (first (ent/get-all-entities-with-component sys c/CoorBag))
-        sys (e/put-item-in sys loc area)
+        sys (e/put-coor-in-bag sys loc area)
+        sys (e/add-link-in-coor sys loc loc2 :left)
+        sys (e/add-link-in-coor sys loc2 loc :right)
         sys-player (e/create-player sys "Caleb" "space pirate" loc)]
     sys-player))
 

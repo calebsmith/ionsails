@@ -5,7 +5,10 @@
 
 (deflistener console-messages-main :console
   [world data]
-  (swap! world update :console/messages-main conj data))
+  (let [multi (:multi data)]
+    (if multi
+      (swap! world update :console/messages-main concat multi)
+      (swap! world update :console/messages-main conj data))))
 
 (defn scroll-bottom
   "When console is not in focus, force scroll to the bottom"
@@ -29,5 +32,10 @@
   (event/send :console {:text "Before you is a mailbox" :category "info"})
 
   (event/send :console {:text "DEATH IS IMMINENT" :category :warning})
+
+  (event/send :console {:multi [
+                                {:text "DEATH IS IMMINENT" :category :warning}
+                                {:text "All your base" :category :warning}
+                                ]})
 
   )

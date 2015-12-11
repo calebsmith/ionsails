@@ -19,6 +19,7 @@
         (ent/add-component loc (c/->Coor x y z))
         (ent/add-component loc (c/->Description desc))
         (ent/add-component loc (c/->CoorContainer nil))
+        (ent/add-component loc (c/->CoorRefMap {}))
         (ent/add-component loc (c/->Ident name name)))))
 
 (defn create-player
@@ -31,16 +32,24 @@
         (ent/add-component player (c/->Description desc))
         (ent/add-component player (c/->Ident name name)))))
 
-(defn- add-item-to-container
-  [bag item]
-  (c/->CoorBag (conj (:items bag) item)))
+(defn- add-coor-to-container
+  [bag coor]
+  (c/->CoorBag (conj (:coors bag) coor)))
 
-(defn- add-container-to-item
-  [item bag]
+(defn- add-container-to-coor
+  [coor bag]
   (c/->CoorContainer bag))
 
-(defn put-item-in
-  [sys item bag]
+(defn put-coor-in-bag
+  [sys coor bag]
   (-> sys
-      (ent/update-component bag c/CoorBag add-item-to-container item)
-      (ent/update-component item c/CoorContainer add-container-to-item bag)))
+      (ent/update-component bag c/CoorBag add-coor-to-container coor)
+      (ent/update-component coor c/CoorContainer add-container-to-coor bag)))
+
+(defn- add-coor-to-ref-map
+  [coor-map kw coor-b]
+  (c/->CoorRefMap (merge (:items coor-map) {kw coor-b})))
+
+(defn add-link-in-coor
+  [sys coor-a coor-b kw]
+  (ent/update-component sys coor-a c/CoorRefMap add-coor-to-ref-map kw coor-b))

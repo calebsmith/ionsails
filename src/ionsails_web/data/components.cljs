@@ -6,4 +6,5 @@
 (defrecord Description [description])
 (defrecord CoorContainer [id])
 (defrecord CoorRef [id])
+(defrecord CoorRefMap [items])
 (defrecord Control [bool])
