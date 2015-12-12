@@ -32,6 +32,14 @@
     color: white;
 }
 
+.console li.title {
+    color: yellow;
+}
+
+.console li.exit {
+    color: magenta;
+}
+
 .console li.echo {
     color: #999;
 }

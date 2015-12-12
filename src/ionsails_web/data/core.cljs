@@ -9,8 +9,8 @@
   []
   (let [sys (-> (ent/create-system)
                 (e/create-area "main" 0 1 2)
-                (e/create-location "bar" "A dive bar" 1 2 1)
-                (e/create-location "garage" "A spaceport garage" 1 4 1))
+                (e/create-location "A spaceport dive bar" "" 1 2 1)
+                (e/create-location "A spaceport garage" "A vast steel room, evidently for docking and repairing ships." 1 4 1))
         loc (first (ent/get-all-entities-with-component sys c/CoorContainer))
         loc2 (second (ent/get-all-entities-with-component sys c/CoorContainer))
         area (first (ent/get-all-entities-with-component sys c/CoorBag))

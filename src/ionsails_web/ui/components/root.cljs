@@ -11,4 +11,4 @@
   [state world]
   (d/div {}
          (console/Console state 1)
-         (command/CommandLine (:command-completions state) 1)))
+         (command/CommandLine nil world 1)))

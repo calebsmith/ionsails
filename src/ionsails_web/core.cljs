@@ -1,6 +1,7 @@
 (ns ionsails-web.core
   (:require [ionsails-web.state :as state]
             [ionsails-web.event :as event :refer-macros [deflistener]]
+            [ionsails-web.logic.command :as cmd]
             [ionsails-web.render :as render]))
 
 (enable-console-print!)
@@ -13,7 +14,8 @@
   []
   (swap! world assoc :started true)
   (event/initialize world)
-  (render/render world (.getElementById js/document "app") :root))
+  (render/render world (.getElementById js/document "app") :root)
+  (cmd/handle-look world ""))
 
 ;; Initial call to main
 (when-not (get @world :started) (main))

@@ -5,10 +5,9 @@
 
 (deflistener console-messages-main :console
   [world data]
-  (let [multi (:multi data)]
-    (if multi
-      (swap! world update :console/messages-main concat multi)
-      (swap! world update :console/messages-main conj data))))
+  (let [multi (:multi data)
+        send-data (if multi multi [data])]
+    (swap! world update :console/messages-main concat send-data)))
 
 (defn scroll-bottom
   "When console is not in focus, force scroll to the bottom"

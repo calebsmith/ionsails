@@ -14,11 +14,14 @@
         player (:player-id @world)
         loc (:id (first (filter #(= (type %) c/CoorRef) (ent/get-all-components-on-entity sys player))))
         loc-components (ent/get-all-components-on-entity sys loc)
+        room-name (:name (first (filter #(= (type %) c/Ident) loc-components)))
         room-desc (:description (first (filter #(= (type %) c/Description) loc-components)))
         exit-items (:items (first (filter #(= (type %) c/CoorRefMap) loc-components)))
-        exit-descs (for [[k v] exit-items] {:category :info :text (str "An exit to the " (name k))})]
-    (event/send :console {:multi (concat [{:category :info :text room-desc}
-                                          {:category :info :text "Available exits:"}]
+        exit-descs (for [[k v] exit-items] {:category :exit :text (str "An exit to the " (name k))})]
+    (event/send :console {:multi (concat [{:category :echo :text "You are in:"}
+                                          {:category :title :text room-name}
+                                          {:category :info :text room-desc}
+                                          {:category :exit :text "Exits:"}]
                                          exit-descs)})))
 
 (deflistener handle-command :command
@@ -27,4 +30,6 @@
         handler (condp = command
                   "look" handle-look
                   handle-nop)]
-    (handler world command)))
+    (handler world command)
+    (when (not= handler handle-nop)
+      (swap! world update :ui.command.history conj command))))
