@@ -25,16 +25,3 @@
     (d/div {:id elm-id :className "console"}
            (apply d/ul {}
                   (map #(d/li {:className (:category %)} (:text  %)) messages)))))
-
-(comment
-
-  (event/send :console {:text "Before you is a mailbox" :category "info"})
-
-  (event/send :console {:text "DEATH IS IMMINENT" :category :warning})
-
-  (event/send :console {:multi [
-                                {:text "DEATH IS IMMINENT" :category :warning}
-                                {:text "All your base" :category :warning}
-                                ]})
-
-  )
