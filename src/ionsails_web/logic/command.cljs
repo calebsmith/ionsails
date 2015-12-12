@@ -63,6 +63,11 @@
 (def handle-forward #(handle-move %1 :forward))
 (def handle-backward #(handle-move %1 :backward))
 
+(defn handle-initial
+  [world c]
+  (handle-look world c)
+  (event/send :console {:category :echo :text "Type \"help\" in the input box below for help"}))
+
 (def command-lookup
   {"look" handle-look
    "left" handle-left

@@ -65,4 +65,4 @@
               (event-grab world elm-id-num))
   [_ world elm-id-num]
   (d/div {:id (str "command-line-" elm-id-num) :className "command-line"}
-         (du/input {:id (str "command-line-input-" elm-id-num)})))
+         (du/input {:id (str "command-line-input-" elm-id-num) :autoFocus true})))

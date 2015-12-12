@@ -15,7 +15,7 @@
   (swap! world assoc :started true)
   (event/initialize world)
   (render/render world (.getElementById js/document "app") :root)
-  (cmd/handle-look world ""))
+  (cmd/handle-initial world ""))
 
 ;; Initial call to main
 (when-not (get @world :started) (main))
