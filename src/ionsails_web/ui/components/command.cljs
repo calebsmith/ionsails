@@ -8,6 +8,7 @@
 
 (defn handle-enter
   [world elm inp-elm evt val]
+  (swap! world assoc-in [:ui :command.history-line] -1)
   (when (not= val "")
     (event/send :console {:category :echo :text (str "=> " val)})
     (event/send :command {:command val})
@@ -17,26 +18,26 @@
   [world elm inp-elm evt val]
   (do 
     (.preventDefault evt)
-    (when-let [hints (trie/lookup (:ui.command.completions @world) val)]
+    (when-let [hints (trie/lookup (-> @world :ui :command.completions) val)]
       (when (= (count hints) 1)
         (set! (.-value inp-elm) (first hints))))))
 
 (defn handle-up
   [world elm inp-elm evt val]
-  (let [history (vec (reverse (:ui.command.history @world)))
-        history-line (inc (get @world :ui.command.history-line -1))
+  (let [history (vec (reverse (-> @world :ui :command.history)))
+        history-line (inc (get-in @world [:ui :command.history-line] -1))
         hist-value (get history history-line)]
     (when (and (< history-line (count history)) hist-value)
-      (swap! world assoc :ui.command.history-line history-line)
+      (swap! world assoc-in [:ui :command.history-line] history-line)
       (set! (.-value inp-elm) hist-value))))
 
 (defn handle-down
   [world elm inp-elm evt val]
-  (let [history (vec (reverse (:ui.command.history @world)))
-        history-line (dec (get @world :ui.command.history-line 0))
+  (let [history (vec (reverse (-> @world :ui :command.history)))
+        history-line (dec (get-in @world [:ui :command.history-line] 0))
         hist-value (get history history-line "")]
     (when (>= history-line -1)
-      (swap! world assoc :ui.command.history-line history-line)
+      (swap! world assoc-in [:ui :command.history-line] history-line)
       (set! (.-value inp-elm) hist-value))))
 
 (def handler-lookup

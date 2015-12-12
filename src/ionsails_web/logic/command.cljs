@@ -23,7 +23,7 @@
 
 (defn handle-clear
   [world c]
-  (swap! world assoc :console/messages-main (buff/ring-buffer 150)))
+  (swap! world assoc-in [:ui :console.messages] (buff/ring-buffer 250)))
 
 (defn handle-look
   [world c]
@@ -91,4 +91,4 @@
         handler (get command-lookup command handle-nop)]
     (handler world command)
     (when (not= handler handle-nop)
-      (swap! world update :ui.command.history conj command))))
+      (swap! world update-in [:ui :command.history] conj command))))

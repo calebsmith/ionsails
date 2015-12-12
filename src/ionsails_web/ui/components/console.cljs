@@ -7,7 +7,7 @@
   [world data]
   (let [multi (:multi data)
         send-data (if multi multi [data])]
-    (swap! world update :console/messages-main concat send-data)))
+    (swap! world update-in [:ui :console.messages] concat send-data)))
 
 (defn scroll-bottom
   "When console is not in focus, force scroll to the bottom"
@@ -20,7 +20,7 @@
   :on-render (fn [_ state _ elm-id-num]
                (scroll-bottom (str "console-" elm-id-num)))
   [state elm-id-num]
-  (let [messages (:console/messages-main state)
+  (let [messages (-> state :ui :console.messages)
         elm-id (str "console-" elm-id-num)]
     (d/div {:id elm-id :className "console"}
            (apply d/ul {}

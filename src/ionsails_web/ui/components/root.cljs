@@ -5,7 +5,6 @@
             [ionsails-web.ui.components.command :as command]
             [ionsails-web.ui.components.console :as console]))
 
-
 (q/defcomponent RootComponent
   "The root of the application UI"
   [state world]
