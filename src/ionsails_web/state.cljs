@@ -1,5 +1,6 @@
 (ns ionsails-web.state
   (:require [amalloy.ring-buffer :as buff]
+            [ionsails-web.logic.command :as cmd]
             [ionsails-web.util.trie :as trie]
             [ionsails-web.data.core :as datacore]))
 
@@ -8,7 +9,7 @@
   (let [sys (datacore/build-initial-system)]
     {:console/messages-main (buff/ring-buffer 150)
      ;; Hard- coded for now
-     :ui.command.completions (trie/build-trie ["look" "go" "where" "when"])
+     :ui.command.completions (trie/build-trie cmd/commands)
      :ui.command.history (buff/ring-buffer 50)
      :system sys
      :player-id (datacore/get-player-id sys)

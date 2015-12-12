@@ -50,6 +50,12 @@
   [coor-map kw coor-b]
   (c/->CoorRefMap (merge (:items coor-map) {kw coor-b})))
 
+(defn change-loc
+  [sys ent coor]
+  (ent/update-component sys ent c/CoorRef
+                        (fn [coor-ref coor]
+                          (c/->CoorRef coor)) coor))
+
 (defn add-link-in-coor
   [sys coor-a coor-b kw]
   (ent/update-component sys coor-a c/CoorRefMap add-coor-to-ref-map kw coor-b))

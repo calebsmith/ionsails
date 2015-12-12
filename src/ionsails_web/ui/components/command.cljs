@@ -9,8 +9,8 @@
 (defn handle-enter
   [world elm inp-elm evt val]
   (when (not= val "")
-    (event/send :command {:command val})
     (event/send :console {:category :echo :text (str "=> " val)})
+    (event/send :command {:command val})
     (set! (.-value inp-elm) "")))
 
 (defn handle-tab
