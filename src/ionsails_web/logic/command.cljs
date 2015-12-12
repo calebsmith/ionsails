@@ -34,7 +34,11 @@
         room-name (:name (first (filter #(= (type %) c/Ident) loc-components)))
         room-desc (:description (first (filter #(= (type %) c/Description) loc-components)))
         exit-items (:items (first (filter #(= (type %) c/CoorRefMap) loc-components)))
-        exit-descs (for [[k v] exit-items] {:category :exit :text (str "An exit to the " (name k))})]
+        exit-descs (vec (for [[k v] exit-items]
+                          (let [loc-comp (ent/get-all-components-on-entity sys v)
+                                exit-room-name (:name (first (filter #(= (type %) c/Ident) loc-comp)))]
+                            {:category :exit
+                             :text (str (name k) " - " exit-room-name)})))]
     (event/send :console {:multi (concat [{:category :echo :text "You are in:"}
                                           {:category :title :text room-name}
                                           {:category :info :text room-desc}

@@ -8,9 +8,7 @@
   []
   (let [sys (datacore/build-initial-system)]
     {:console/messages-main (buff/ring-buffer 150)
-     ;; Hard- coded for now
      :ui.command.completions (trie/build-trie cmd/commands)
      :ui.command.history (buff/ring-buffer 50)
      :system sys
-     :player-id (datacore/get-player-id sys)
-     }))
+     :player-id (datacore/get-player-id sys)}))
