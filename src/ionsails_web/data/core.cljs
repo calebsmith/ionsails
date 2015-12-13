@@ -8,15 +8,17 @@
 (defn build-initial-system
   []
   (let [sys (ent/create-system)
-        [sys area] (e/create-area sys "main" 0 1 2)
+        [sys area] (e/create-area sys "main" ["spaceport"] 0 1 2)
         [sys loc1] (e/create-location sys "A spaceport dive bar" "Not much, but there is booze" 1 2 1)
         [sys loc2] (e/create-location sys "A spaceport garage" "A vast steel room, evidently for docking and repairing ships." 1 4 1)
         [sys item] (e/create-item sys "monkey wrench" ["wrench"] "A monkey wrench")
+        [sys pack] (e/create-item sys "backpack" ["backpack"] "A burlap backpack")
         [sys player] (e/create-player sys "Caleb" "space pirate" loc1)
         sys (-> sys
                 (e/put-coor-in-bag loc1 area)
                 (e/put-coor-in-bag loc2 area)
                 (e/place-item item loc2)
+                (e/place-item pack player)
                 (e/add-link-in-coor loc1 loc2 :left)
                 (e/add-link-in-coor loc2 loc1 :right))]
     [sys player]))

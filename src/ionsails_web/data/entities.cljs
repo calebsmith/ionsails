@@ -3,12 +3,13 @@
             [ionsails-web.data.components :as c]))
 
 (defn create-area
-  [sys name x y z]
+  [sys name keywords x y z]
   (let [area (ent/create-entity)
         sys (-> sys
                 (ent/add-entity area)
                 (ent/add-component area (c/->Coor x y z))
                 (ent/add-component area (c/->CoorBag #{}))
+                (ent/add-component area (c/->Keywords keywords))
                 (ent/add-component area (c/->Ident name)))]
     [sys area]))
 
@@ -39,6 +40,7 @@
   [sys name keywords desc]
   (let [item (ent/create-entity)
         sys (-> sys (ent/add-entity item)
+                (ent/add-component item (c/->ItemContainer nil))
                 (ent/add-component item (c/->Description desc))
                 (ent/add-component item (c/->Keywords keywords))
                 (ent/add-component item (c/->Ident name)))]
@@ -76,16 +78,23 @@
   [bag item]
   (c/->ItemBag (conj (:items bag) item)))
 
+(defn- add-container-to-item
+  [item bag]
+  (c/->ItemContainer bag))
+
 (defn- remove-item-from-ent
   [bag item]
   (c/->ItemBag (disj (:items bag) item)))
 
 (defn place-item
   [sys item place]
-  (ent/update-component sys place c/ItemBag add-item-to-ent item))
+  (-> sys
+      (ent/update-component place c/ItemBag add-item-to-ent item)
+      (ent/update-component item c/ItemContainer add-container-to-item place)))
 
 (defn move-item
   [sys src target item]
   (-> sys
       (ent/update-component src c/ItemBag remove-item-from-ent item)
-      (ent/update-component target c/ItemBag add-item-to-ent item)))
+      (ent/update-component target c/ItemBag add-item-to-ent item)
+      (ent/update-component item c/ItemContainer add-container-to-item target)))

@@ -7,6 +7,7 @@
 (defrecord Keywords [keywords])
 (defrecord Description [description])
 (defrecord CoorContainer [id])
+(defrecord ItemContainer [id])
 (defrecord CoorRef [id])
 (defrecord CoorRefMap [items])
 (defrecord Control [bool])
