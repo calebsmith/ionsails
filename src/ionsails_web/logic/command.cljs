@@ -8,6 +8,22 @@
 
 (declare commands)
 
+(defn match-keyword
+  [sys entities c]
+  (let [args (rest (s/split c " "))
+        query-item-name (first args)
+        query-item-number (or (int (second args)) 1)
+        ent-pairs (map (fn [e] [e (set (:keywords (ent/get-component sys e c/Keywords)))])
+                       entities)
+        ent-pair-candidates (vec (filter (fn [[id kws]]
+                                           (contains? kws query-item-name))
+                                         ent-pairs))
+        query-item-number (if (< query-item-number (count ent-pair-candidates))
+                            (if (< query-item-number 0) 0 query-item-number)
+                            (dec (count ent-pair-candidates)))
+        [item-id item-kw] (get ent-pair-candidates query-item-number)]
+    item-id))
+
 (defn handle-nop
   [world c]
   (event/send :console {:category :echo :text (str c " is not a valid command")}))
@@ -80,27 +96,29 @@
 
 (defn handle-get
   [world c]
-  (let [args (rest (s/split c " "))
-        query-item-name (first args)
-        query-item-number (or (int (second args)) 1)
-        sys (:system @world)
+  (let [sys (:system @world)
         player (:player-id @world)
         loc (:id (ent/get-component sys player c/CoorRef))
         loc-items (:items (ent/get-component sys loc c/ItemBag))
-        item-pairs (map (fn [v] [v (set (:keywords (ent/get-component sys v c/Keywords)))])
-                        loc-items)
-        item-pair-candidates (vec (filter (fn [[id kws]]
-                                            (contains? kws query-item-name))
-                                          item-pairs))
-        query-item-number (if (< query-item-number (count item-pair-candidates))
-                            (if (< query-item-number 0) 0 query-item-number)
-                            (dec (count item-pair-candidates)))
-        [item-id item-kw] (get item-pair-candidates query-item-number)]
+        item-id (match-keyword sys loc-items c)]
     (if item-id
       (do
         (event/send :console {:category :echo :text "You pick it up"})
         (swap! world assoc :system (e/move-item sys loc player item-id)))
       (event/send :console {:category :echo :text "That item isn't here"}))))
+
+(defn handle-drop
+  [world c]
+  (let [sys (:system @world)
+        player (:player-id @world)
+        loc (:id (ent/get-component sys player c/CoorRef))
+        player-items (:items (ent/get-component sys player c/ItemBag))
+        item-id (match-keyword sys player-items c)]
+    (if item-id
+      (do
+        (event/send :console {:category :echo :text "You drop it"})
+        (swap! world assoc :system (e/move-item sys player loc item-id)))
+      (event/send :console {:category :echo :text "You aren't holding that item"}))))
 
 (def handle-left #(handle-move %1 :left))
 (def handle-right #(handle-move %1 :right))
@@ -118,6 +136,7 @@
   {"look" handle-look
    "inventory" handle-inventory
    "get" handle-get
+   "drop" handle-drop
    "left" handle-left
    "right" handle-right
    "up" handle-up
