@@ -12,7 +12,7 @@
 
 (defn initial-state
   []
-  (let [sys (datacore/build-initial-system)]
+  (let [[sys player] (datacore/build-initial-system)]
     {:ui (initial-ui)
      :system sys
-     :player-id (datacore/get-player-id sys)}))
+     :player-id player}))

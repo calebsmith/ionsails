@@ -2,6 +2,7 @@
 
 (defrecord Coor [x y z])
 (defrecord CoorBag [items])
+(defrecord ItemBag [items])
 (defrecord Ident [name kw])
 (defrecord Description [description])
 (defrecord CoorContainer [id])

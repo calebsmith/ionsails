@@ -4,37 +4,48 @@
 
 (defn create-area
   [sys name x y z]
-  (let [area (ent/create-entity)]
-    (-> sys
-        (ent/add-entity area)
-        (ent/add-component area (c/->Coor x y z))
-        (ent/add-component area (c/->CoorBag #{}))
-        (ent/add-component area (c/->Ident name name)))))
+  (let [area (ent/create-entity)
+        sys (-> sys
+                (ent/add-entity area)
+                (ent/add-component area (c/->Coor x y z))
+                (ent/add-component area (c/->CoorBag #{}))
+                (ent/add-component area (c/->Ident name name)))]
+    [sys area]))
 
 (defn create-location
   [sys name desc x y z]
   (let [loc (ent/create-entity)
-        sys (ent/add-entity sys loc)]
-    (-> sys
-        (ent/add-component loc (c/->Coor x y z))
-        (ent/add-component loc (c/->Description desc))
-        (ent/add-component loc (c/->CoorContainer nil))
-        (ent/add-component loc (c/->CoorRefMap {}))
-        (ent/add-component loc (c/->Ident name name)))))
+        sys (-> sys (ent/add-entity loc)
+                (ent/add-component loc (c/->Coor x y z))
+                (ent/add-component loc (c/->Description desc))
+                (ent/add-component loc (c/->CoorContainer nil))
+                (ent/add-component loc (c/->CoorRefMap {}))
+                (ent/add-component loc (c/->ItemBag #{}))
+                (ent/add-component loc (c/->Ident name name)))]
+    [sys loc]))
 
 (defn create-player
   [sys name desc coor]
   (let [player (ent/create-entity)
-        sys (ent/add-entity sys player)]
-    (-> sys
-        (ent/add-component player (c/->Control true))
-        (ent/add-component player (c/->CoorRef coor))
-        (ent/add-component player (c/->Description desc))
-        (ent/add-component player (c/->Ident name name)))))
+        sys (-> sys (ent/add-entity player)
+                (ent/add-component player (c/->Control true))
+                (ent/add-component player (c/->CoorRef coor))
+                (ent/add-component player (c/->ItemBag #{}))
+                (ent/add-component player (c/->Description desc))
+                (ent/add-component player (c/->Ident name name)))]
+    [sys player]))
+
+(defn create-item
+  [sys name desc]
+  (let [item (ent/create-entity)
+        sys (-> sys (ent/add-entity item)
+                (ent/add-component item (c/->Description desc))
+                (ent/add-component item (c/->Ident name name)))]
+    [sys item]))
 
 (defn- add-coor-to-container
   [bag coor]
-  (c/->CoorBag (conj (:coors bag) coor)))
+  (c/->CoorBag (conj (:items bag) coor)))
 
 (defn- add-container-to-coor
   [coor bag]
@@ -59,3 +70,21 @@
 (defn add-link-in-coor
   [sys coor-a coor-b kw]
   (ent/update-component sys coor-a c/CoorRefMap add-coor-to-ref-map kw coor-b))
+
+(defn- add-item-to-ent
+  [bag item]
+  (c/->ItemBag (conj (:items bag) item)))
+
+(defn- remove-item-from-ent
+  [bag item]
+  (c/->ItemBag (disj (:items bag) item)))
+
+(defn place-item
+  [sys item place]
+  (ent/update-component sys place c/ItemBag add-item-to-ent item))
+
+(defn move-item
+  [sys src target item]
+  (-> sys
+      (ent/update-component src c/ItemBag remove-item-from-ent item)
+      (ent/update-component target c/ItemBag add-item-to-ent item)))
