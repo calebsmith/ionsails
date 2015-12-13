@@ -36,7 +36,15 @@
     color: yellow;
 }
 
+.console li.item {
+    color: green;
+}
+
 .console li.exit {
+    color: #88AAFF;
+}
+
+.console li.mob {
     color: magenta;
 }
 

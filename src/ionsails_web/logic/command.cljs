@@ -31,27 +31,45 @@
         player (:player-id @world)
         loc (:id (first (filter #(= (type %) c/CoorRef) (ent/get-all-components-on-entity sys player))))
         loc-components (ent/get-all-components-on-entity sys loc)
-        room-name (:name (first (filter #(= (type %) c/Ident) loc-components)))
-        room-desc (:description (first (filter #(= (type %) c/Description) loc-components)))
-        exit-items (:items (first (filter #(= (type %) c/CoorRefMap) loc-components)))
-        exit-descs (vec (for [[k v] exit-items]
-                          (let [loc-comp (ent/get-all-components-on-entity sys v)
-                                exit-room-name (:name (first (filter #(= (type %) c/Ident) loc-comp)))]
-                            {:category :exit
-                             :text (str (name k) " - " exit-room-name)})))]
-    (event/send :console {:multi (concat [{:category :echo :text "You are in:"}
-                                          {:category :title :text room-name}
-                                          {:category :info :text room-desc}
-                                          {:category :exit :text "Exits:"}]
-                                         exit-descs)})))
+        room-name (:name (ent/get-component sys loc c/Ident))
+        room-desc (:description (ent/get-component sys loc c/Description))
+        room-inventory (:items (ent/get-component sys loc c/ItemBag))
+        exit-items (:items (ent/get-component sys loc c/CoorRefMap))
+        item-descs (map #(let [item-desc (:description (ent/get-component sys % c/Description))]
+                           {:category :item :text item-desc}) room-inventory)
+        exit-descs (for [[k v] exit-items]
+                     (let [exit-room-name (:name (ent/get-component sys v c/Ident))
+                           formatted-name (str (name k) " - " exit-room-name)]
+                       {:category :exit :text formatted-name}))
+        msg-body (concat [{:category :title :text room-name}
+                          {:category :info :text room-desc}]
+                         (when ((complement empty?) item-descs)
+                           [{:category :item :text "Items:"}])
+                         item-descs
+                         (when ((complement empty?) exit-descs)
+                           [{:category :exit :text "Exits:"}]
+                           exit-descs))]
+    (event/send :console {:multi msg-body})))
+
+(defn handle-inventory
+  [world c]
+  (let [sys (:system @world)
+        player (:player-id @world)
+        items (:items (ent/get-component sys player c/ItemBag))
+        item-names (map #(let [item-name (:name (ent/get-component sys % c/Ident))]
+                           {:category :item :text item-name}) items)
+        msg-body (if (empty? item-names)
+                   [{:category :echo :text "Your inventory is empty"}]
+                   (concat [{:category :echo :text "You are holding: "}] item-names))]
+    (event/send :console {:multi msg-body})))
 
 (defn handle-move
   [world target]
   (let [sys (:system @world)
         player (:player-id @world)
-        loc (:id (first (filter #(= (type %) c/CoorRef) (ent/get-all-components-on-entity sys player))))
+        loc (:id (ent/get-component sys player c/CoorRef))
         loc-components (ent/get-all-components-on-entity sys loc)
-        exit-items (:items (first (filter #(= (type %) c/CoorRefMap) loc-components)))
+        exit-items (:items (ent/get-component sys loc c/CoorRefMap))
         target-loc (target exit-items)]
     (if target-loc
       (do
@@ -59,6 +77,30 @@
                (e/change-loc sys player target-loc))
         (handle-look world ""))
       (event/send :console {:category :echo :text "No exit in that direction"}))))
+
+(defn handle-get
+  [world c]
+  (let [args (rest (s/split c " "))
+        query-item-name (first args)
+        query-item-number (or (int (second args)) 1)
+        sys (:system @world)
+        player (:player-id @world)
+        loc (:id (ent/get-component sys player c/CoorRef))
+        loc-items (:items (ent/get-component sys loc c/ItemBag))
+        item-pairs (map (fn [v] [v (set (:keywords (ent/get-component sys v c/Keywords)))])
+                        loc-items)
+        item-pair-candidates (vec (filter (fn [[id kws]]
+                                            (contains? kws query-item-name))
+                                          item-pairs))
+        query-item-number (if (< query-item-number (count item-pair-candidates))
+                            (if (< query-item-number 0) 0 query-item-number)
+                            (dec (count item-pair-candidates)))
+        [item-id item-kw] (get item-pair-candidates query-item-number)]
+    (if item-id
+      (do
+        (event/send :console {:category :echo :text "You pick it up"})
+        (swap! world assoc :system (e/move-item sys loc player item-id)))
+      (event/send :console {:category :echo :text "That item isn't here"}))))
 
 (def handle-left #(handle-move %1 :left))
 (def handle-right #(handle-move %1 :right))
@@ -74,6 +116,8 @@
 
 (def command-lookup
   {"look" handle-look
+   "inventory" handle-inventory
+   "get" handle-get
    "left" handle-left
    "right" handle-right
    "up" handle-up
@@ -87,8 +131,16 @@
 
 (deflistener handle-command :command
   [world {:keys [command]}]
-  (let [command (s/lower-case command)
-        handler (get command-lookup command handle-nop)]
+  (let [command (-> command s/trim s/lower-case)
+        command-top (first (s/split command " "))
+        handler (get command-lookup command-top handle-nop)]
     (handler world command)
     (when (not= handler handle-nop)
       (swap! world update-in [:ui :command.history] conj command))))
+
+(comment
+
+  (s/split "look" " ")
+
+
+  )

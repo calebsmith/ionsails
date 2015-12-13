@@ -9,7 +9,7 @@
                 (ent/add-entity area)
                 (ent/add-component area (c/->Coor x y z))
                 (ent/add-component area (c/->CoorBag #{}))
-                (ent/add-component area (c/->Ident name name)))]
+                (ent/add-component area (c/->Ident name)))]
     [sys area]))
 
 (defn create-location
@@ -21,7 +21,7 @@
                 (ent/add-component loc (c/->CoorContainer nil))
                 (ent/add-component loc (c/->CoorRefMap {}))
                 (ent/add-component loc (c/->ItemBag #{}))
-                (ent/add-component loc (c/->Ident name name)))]
+                (ent/add-component loc (c/->Ident name)))]
     [sys loc]))
 
 (defn create-player
@@ -32,15 +32,16 @@
                 (ent/add-component player (c/->CoorRef coor))
                 (ent/add-component player (c/->ItemBag #{}))
                 (ent/add-component player (c/->Description desc))
-                (ent/add-component player (c/->Ident name name)))]
+                (ent/add-component player (c/->Ident name)))]
     [sys player]))
 
 (defn create-item
-  [sys name desc]
+  [sys name keywords desc]
   (let [item (ent/create-entity)
         sys (-> sys (ent/add-entity item)
                 (ent/add-component item (c/->Description desc))
-                (ent/add-component item (c/->Ident name name)))]
+                (ent/add-component item (c/->Keywords keywords))
+                (ent/add-component item (c/->Ident name)))]
     [sys item]))
 
 (defn- add-coor-to-container

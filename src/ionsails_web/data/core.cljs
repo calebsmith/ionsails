@@ -9,9 +9,9 @@
   []
   (let [sys (ent/create-system)
         [sys area] (e/create-area sys "main" 0 1 2)
-        [sys loc1] (e/create-location sys "A spaceport dive bar" "" 1 2 1)
+        [sys loc1] (e/create-location sys "A spaceport dive bar" "Not much, but there is booze" 1 2 1)
         [sys loc2] (e/create-location sys "A spaceport garage" "A vast steel room, evidently for docking and repairing ships." 1 4 1)
-        [sys item] (e/create-item sys "wrench" "A monkey wrench")
+        [sys item] (e/create-item sys "monkey wrench" ["wrench"] "A monkey wrench")
         [sys player] (e/create-player sys "Caleb" "space pirate" loc1)
         sys (-> sys
                 (e/put-coor-in-bag loc1 area)
