@@ -8,9 +8,11 @@
                  [org.clojure/clojure "1.7.0"]
                  [org.clojure/clojurescript "1.7.170"]
                  [org.clojure/core.async "0.2.374"]
+                 [org.clojure/core.match "0.3.0-alpha4"]
                  ;; Data/algorithm libs
                  [amalloy/ring-buffer "1.2"]
-                 [brute "0.3.0"]
+                 [brute "0.3.0"
+                  :exclusions [org.clojure/clojure]]
                  ;; UI libs
                  [quiescent "0.2.0-RC2"
                   :exclusions [cljsjs/react cljsjs/react-with-addons]]

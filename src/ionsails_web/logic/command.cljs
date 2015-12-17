@@ -1,5 +1,6 @@
 (ns ionsails-web.logic.command
   (:require [clojure.string :as s]
+            [cljs.core.match :refer-macros [match]]
             [amalloy.ring-buffer :as buff]
             [brute.entity :as ent]
             [ionsails-web.data.components :as c]
@@ -23,6 +24,23 @@
                             (dec (count ent-pair-candidates)))
         [item-id item-kw] (get ent-pair-candidates query-item-number)]
     item-id))
+
+(defn parse-get-args
+  "N.B. Not incorporated yet"
+  [command]
+  (let [int? #(not (js/isNaN (js/parseInt %)))
+        nint? #(js/isNaN (js/parseInt %))]
+    (match [(vec (rest (s/split command " ")))]
+           [[(kw :guard #(nint? %))]] [1 kw 1 nil]
+           [[(q :guard #(int? %)) (kw :guard #(nint? %))]] [q kw 1 nil]
+           [[(kw :guard #(nint? %)) (kw-index :guard #(int? %))]] [1 kw kw-index nil]
+           [[(q :guard #(int? %)) (kw :guard #(nint? %)) (kw-index :guard #(int? %))]] [q kw kw-index nil]
+           ;; getting from a container
+           [[(kw :guard #(nint? %)) "from" (container :guard #(nint? %))]] [1 kw 1 container]
+           [[(q :guard #(int? %)) (kw :guard #(nint? %)) "from" (container :guard #(nint? %))]] [q kw 1 container]
+           [[(kw :guard #(nint? %)) (kw-index :guard #(int? %)) "from" (container :guard #(nint? %))]] [1 kw kw-index container]
+           [[(q :guard #(int? %)) (kw :guard #(nint? %)) (kw-index :guard #(int? %)) "from" (container :guard #(nint? %))]] [q kw kw-index container]
+           :else :no-match)))
 
 (defn handle-nop
   [world c]
@@ -156,10 +174,3 @@
     (handler world command)
     (when (not= handler handle-nop)
       (swap! world update-in [:ui :command.history] conj command))))
-
-(comment
-
-  (s/split "look" " ")
-
-
-  )
