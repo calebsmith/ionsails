@@ -30,17 +30,18 @@
   [command]
   (let [int? #(not (js/isNaN (js/parseInt %)))
         nint? #(js/isNaN (js/parseInt %))]
-    (match [(vec (rest (s/split command " ")))]
-           [[(kw :guard #(nint? %))]] [1 kw 1 nil]
-           [[(q :guard #(int? %)) (kw :guard #(nint? %))]] [q kw 1 nil]
-           [[(kw :guard #(nint? %)) (kw-index :guard #(int? %))]] [1 kw kw-index nil]
-           [[(q :guard #(int? %)) (kw :guard #(nint? %)) (kw-index :guard #(int? %))]] [q kw kw-index nil]
-           ;; getting from a container
-           [[(kw :guard #(nint? %)) "from" (container :guard #(nint? %))]] [1 kw 1 container]
-           [[(q :guard #(int? %)) (kw :guard #(nint? %)) "from" (container :guard #(nint? %))]] [q kw 1 container]
-           [[(kw :guard #(nint? %)) (kw-index :guard #(int? %)) "from" (container :guard #(nint? %))]] [1 kw kw-index container]
-           [[(q :guard #(int? %)) (kw :guard #(nint? %)) (kw-index :guard #(int? %)) "from" (container :guard #(nint? %))]] [q kw kw-index container]
-           :else :no-match)))
+    (let [args (vec (rest (s/split command " ")))]
+      (match [(mapv int? args) args]
+             [[false] [kw]] [1 kw 1 nil]
+             [[true false] [q kw]] [q kw  1 nil]
+             [[false true]  [kw kw-index]] [1 kw kw-index nil]
+             [[true false true] [q kw kw-index]] [q kw kw-index nil]
+             [[false _ _] [kw "from" container]] [1 kw 1 container]
+             [[true false _ _] [q kw "from" container]] [q kw  1 container]
+             [[false true _ _]  [kw kw-index "from" container]] [1 kw kw-index container]
+             [[true false true _ _] [q kw kw-index "from" container]] [q kw kw-index container]
+             :else :no-match
+             ))))
 
 (defn handle-nop
   [world c]
