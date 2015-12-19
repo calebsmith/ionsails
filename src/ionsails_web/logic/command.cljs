@@ -10,38 +10,36 @@
 (declare commands)
 
 (defn match-keyword
-  [sys entities c]
-  (let [args (rest (s/split c " "))
-        query-item-name (first args)
-        query-item-number (or (int (second args)) 1)
-        ent-pairs (map (fn [e] [e (set (:keywords (ent/get-component sys e c/Keywords)))])
-                       entities)
-        ent-pair-candidates (vec (filter (fn [[id kws]]
-                                           (contains? kws query-item-name))
-                                         ent-pairs))
-        query-item-number (if (< query-item-number (count ent-pair-candidates))
-                            (if (< query-item-number 0) 0 query-item-number)
-                            (dec (count ent-pair-candidates)))
-        [item-id item-kw] (get ent-pair-candidates query-item-number)]
+  [sys entities kw-query kw-query-index]
+  (let [ent-triples (map (fn [e] [e
+                                  (set (:keywords (ent/get-component sys e c/Keywords)))
+                                  (:name (ent/get-component sys e c/Ident))])
+                         entities)
+        ent-triples-candidates (filter (fn [[id kws name]]
+                                         (contains? kws kw-query))
+                                       ent-triples)
+        ent-triples-candidates (vec (sort-by #(nth % 2) ent-triples-candidates))
+        kw-query-index (if (< kw-query-index (count ent-triples-candidates))
+                         (if (< kw-query-index 0) 0 (dec kw-query-index))
+                         (dec (count ent-triples-candidates)))
+        [item-id item-kw item-name] (get ent-triples-candidates kw-query-index)]
     item-id))
 
 (defn parse-get-args
-  "N.B. Not incorporated yet"
   [command]
   (let [int? #(not (js/isNaN (js/parseInt %)))
         nint? #(js/isNaN (js/parseInt %))]
     (let [args (vec (rest (s/split command " ")))]
       (match [(mapv int? args) args]
              [[false] [kw]] [1 kw 1 nil]
-             [[true false] [q kw]] [q kw  1 nil]
-             [[false true]  [kw kw-index]] [1 kw kw-index nil]
-             [[true false true] [q kw kw-index]] [q kw kw-index nil]
-             [[false _ _] [kw "from" container]] [1 kw 1 container]
-             [[true false _ _] [q kw "from" container]] [q kw  1 container]
-             [[false true _ _]  [kw kw-index "from" container]] [1 kw kw-index container]
-             [[true false true _ _] [q kw kw-index "from" container]] [q kw kw-index container]
-             :else :no-match
-             ))))
+             [[true false] [q kw]] [(js/parseInt q) kw 1 nil]
+             [[false true]  [kw kw-index]] [1 kw (js/parseInt kw-index) nil]
+             [[true false true] [q kw kw-index]] [(js/parseInt q) kw (js/parseInt kw-index) nil]
+             [[false _ _] [kw (:or "in" "from") container]] [1 kw 1 container]
+             [[true false _ _] [q kw (:or "in" "from") container]] [(js/parseInt q) kw 1 container]
+             [[false true _ _]  [kw kw-index (:or "in" "from") container]] [1 kw (js/parseInt kw-index) container]
+             [[true false true _ _] [q kw kw-index (:or "in" "from") container]] [(js/parseInt q) kw (js/parseInt kw-index) container]
+             :else [0 "" 1 nil]))))
 
 (defn handle-nop
   [world c]
@@ -113,17 +111,39 @@
         (handle-look world ""))
       (event/send :console {:category :echo :text "No exit in that direction"}))))
 
+(defn find-keywords-in
+  [sys candidates [q kw kw-index]]
+  (remove nil?
+          (loop [candidates candidates
+                 result-ids []
+                 i 0]
+            (if (< i q)
+              (let [res-id (match-keyword sys candidates kw kw-index)]
+                (recur
+                 (remove #(= % res-id) candidates)
+                 (conj result-ids res-id)
+                 (inc i)))
+              result-ids))))
+
 (defn handle-get
   [world c]
   (let [sys (:system @world)
         player (:player-id @world)
         loc (:id (ent/get-component sys player c/CoorRef))
-        loc-items (:items (ent/get-component sys loc c/ItemBag))
-        item-id (match-keyword sys loc-items c)]
-    (if item-id
-      (do
-        (event/send :console {:category :echo :text "You pick it up"})
-        (swap! world assoc :system (e/move-item sys loc player item-id)))
+        target-items (:items (ent/get-component sys loc c/ItemBag))
+        [q kw kw-index container] (parse-get-args c)
+        item-ids (find-keywords-in sys target-items [q kw kw-index])]
+    (if (seq item-ids)
+      (let [message (if (= 1 (count item-ids)) "You pick it up" "You pick them up")
+            sys (loop [sys (:system @world)
+                       i 0]
+                  (if (< i (count item-ids))
+                    (recur (e/move-item sys loc player (nth item-ids i))
+                           (inc i))
+                    sys))]
+        (do
+          (swap! world assoc :system sys)
+          (event/send :console {:category :echo :text message})))
       (event/send :console {:category :echo :text "That item isn't here"}))))
 
 (defn handle-drop
@@ -131,12 +151,21 @@
   (let [sys (:system @world)
         player (:player-id @world)
         loc (:id (ent/get-component sys player c/CoorRef))
-        player-items (:items (ent/get-component sys player c/ItemBag))
-        item-id (match-keyword sys player-items c)]
-    (if item-id
-      (do
-        (event/send :console {:category :echo :text "You drop it"})
-        (swap! world assoc :system (e/move-item sys player loc item-id)))
+        target-items (:items (ent/get-component sys player c/ItemBag))
+        [q kw kw-index container] (parse-get-args c)
+        item-ids (find-keywords-in sys target-items [q kw kw-index])]
+    (if (seq item-ids)
+      (let [message (if (= 1 (count item-ids)) "You drop it up" "You drop them")
+            sys (loop [sys (:system @world)
+                       i 0]
+                  (if (< i (count item-ids))
+                    (recur (e/move-item sys player loc (nth item-ids i))
+                           (inc i))
+                    sys))]
+        (do
+          (swap! world assoc :system sys)
+          (event/send :console {:category :echo :text message})))
+
       (event/send :console {:category :echo :text "You aren't holding that item"}))))
 
 (def handle-left #(handle-move %1 :left))
