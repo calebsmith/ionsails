@@ -26,20 +26,19 @@
     item-id))
 
 (defn parse-get-args
-  [command]
-  (let [int? #(not (js/isNaN (js/parseInt %)))
-        nint? #(js/isNaN (js/parseInt %))]
-    (let [args (vec (rest (s/split command " ")))]
-      (match [(mapv int? args) args]
-             [[false] [kw]] [1 kw 1 nil]
-             [[true false] [q kw]] [(js/parseInt q) kw 1 nil]
-             [[false true]  [kw kw-index]] [1 kw (js/parseInt kw-index) nil]
-             [[true false true] [q kw kw-index]] [(js/parseInt q) kw (js/parseInt kw-index) nil]
-             [[false _ _] [kw (:or "in" "from") container]] [1 kw 1 container]
-             [[true false _ _] [q kw (:or "in" "from") container]] [(js/parseInt q) kw 1 container]
-             [[false true _ _]  [kw kw-index (:or "in" "from") container]] [1 kw (js/parseInt kw-index) container]
-             [[true false true _ _] [q kw kw-index (:or "in" "from") container]] [(js/parseInt q) kw (js/parseInt kw-index) container]
-             :else [0 "" 1 nil]))))
+  [c-args]
+  (let [->int js/parseInt
+        int? #(-> % ->int js/isNaN not)]
+    (match [(mapv int? c-args) c-args]
+           [[false] [kw]] [1 kw 1 nil]
+           [[true false] [q kw]] [(js/parseInt q) kw 1 nil]
+           [[false true]  [kw kw-index]] [1 kw (js/parseInt kw-index) nil]
+           [[true false true] [q kw kw-index]] [(js/parseInt q) kw (js/parseInt kw-index) nil]
+           [[false _ false] [kw (:or "in" "from") container]] [1 kw 1 container]
+           [[true false _ false] [q kw (:or "in" "from") container]] [(js/parseInt q) kw 1 container]
+           [[false true _ false]  [kw kw-index (:or "in" "from") container]] [1 kw (js/parseInt kw-index) container]
+           [[true false true _ false] [q kw kw-index (:or "in" "from") container]] [(js/parseInt q) kw (js/parseInt kw-index) container]
+           :else [0 "" 1 nil])))
 
 (defn handle-nop
   [world c]
@@ -130,8 +129,8 @@
   (let [sys (:system @world)
         player (:player-id @world)
         loc (:id (ent/get-component sys player c/CoorRef))
+        [q kw kw-index container] (parse-get-args (vec (rest (s/split c " "))))
         target-items (:items (ent/get-component sys loc c/ItemBag))
-        [q kw kw-index container] (parse-get-args c)
         item-ids (find-keywords-in sys target-items [q kw kw-index])]
     (if (seq item-ids)
       (let [message (if (= 1 (count item-ids)) "You pick it up" "You pick them up")
@@ -141,9 +140,8 @@
                     (recur (e/move-item sys loc player (nth item-ids i))
                            (inc i))
                     sys))]
-        (do
-          (swap! world assoc :system sys)
-          (event/send :console {:category :echo :text message})))
+        (swap! world assoc :system sys)
+        (event/send :console {:category :echo :text message}))
       (event/send :console {:category :echo :text "That item isn't here"}))))
 
 (defn handle-drop
@@ -152,20 +150,18 @@
         player (:player-id @world)
         loc (:id (ent/get-component sys player c/CoorRef))
         target-items (:items (ent/get-component sys player c/ItemBag))
-        [q kw kw-index container] (parse-get-args c)
+        [q kw kw-index container] (parse-get-args (vec (rest (s/split c " "))))
         item-ids (find-keywords-in sys target-items [q kw kw-index])]
     (if (seq item-ids)
-      (let [message (if (= 1 (count item-ids)) "You drop it up" "You drop them")
+      (let [message (if (= 1 (count item-ids)) "You drop it" "You drop them")
             sys (loop [sys (:system @world)
                        i 0]
                   (if (< i (count item-ids))
                     (recur (e/move-item sys player loc (nth item-ids i))
                            (inc i))
                     sys))]
-        (do
-          (swap! world assoc :system sys)
-          (event/send :console {:category :echo :text message})))
-
+        (swap! world assoc :system sys)
+        (event/send :console {:category :echo :text message}))
       (event/send :console {:category :echo :text "You aren't holding that item"}))))
 
 (def handle-left #(handle-move %1 :left))
