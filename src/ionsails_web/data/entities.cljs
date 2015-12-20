@@ -37,14 +37,16 @@
     [sys player]))
 
 (defn create-item
-  [sys name keywords desc]
+  [sys name keywords desc container?]
   (let [item (ent/create-entity)
         sys (-> sys (ent/add-entity item)
                 (ent/add-component item (c/->ItemContainer nil))
                 (ent/add-component item (c/->Description desc))
                 (ent/add-component item (c/->Keywords keywords))
                 (ent/add-component item (c/->Ident name)))]
-    [sys item]))
+    (if container?
+      [(ent/add-component sys item (c/->ItemBag #{})) item]
+      [sys item])))
 
 (defn- add-coor-to-container
   [bag coor]

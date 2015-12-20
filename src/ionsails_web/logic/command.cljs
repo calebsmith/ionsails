@@ -25,20 +25,35 @@
         [item-id item-kw item-name] (get ent-triples-candidates kw-query-index)]
     item-id))
 
-(defn parse-get-args
+(defn ->int
+  [n]
+  (js/parseInt n))
+
+(defn int?
+  [n]
+  (-> n ->int js/isNaN not))
+
+(defn parse-q-kw-container
   [c-args]
-  (let [->int js/parseInt
-        int? #(-> % ->int js/isNaN not)]
-    (match [(mapv int? c-args) c-args]
-           [[false] [kw]] [1 kw 1 nil]
-           [[true false] [q kw]] [(js/parseInt q) kw 1 nil]
-           [[false true]  [kw kw-index]] [1 kw (js/parseInt kw-index) nil]
-           [[true false true] [q kw kw-index]] [(js/parseInt q) kw (js/parseInt kw-index) nil]
-           [[false _ false] [kw (:or "in" "from") container]] [1 kw 1 container]
-           [[true false _ false] [q kw (:or "in" "from") container]] [(js/parseInt q) kw 1 container]
-           [[false true _ false]  [kw kw-index (:or "in" "from") container]] [1 kw (js/parseInt kw-index) container]
-           [[true false true _ false] [q kw kw-index (:or "in" "from") container]] [(js/parseInt q) kw (js/parseInt kw-index) container]
-           :else [0 "" 1 nil])))
+  (match [(mapv int? c-args) c-args]
+         [[false] [kw]] [1 kw 1 nil]
+         [[true false] [q kw]] [(->int q) kw 1 nil]
+         [[false true]  [kw kw-index]] [1 kw (->int kw-index) nil]
+         [[true false true] [q kw kw-index]] [(->int q) kw (->int kw-index) nil]
+         [[false _ & _] [kw (:or "in" "from") & container]] [1 kw 1 container]
+         [[true false _ & _] [q kw (:or "in" "from") & container]] [(->int q) kw 1 container]
+         [[false true _ & _]  [kw kw-index (:or "in" "from") & container]] [1 kw (->int kw-index) container]
+         [[true false true _ & _] [q kw kw-index (:or "in" "from") & container]] [(->int q) kw (->int kw-index) container]
+         :else [0 "" 1 nil]))
+
+(defn parse-kw-container
+  [c-args]
+  (match [(mapv int? c-args) c-args]
+         [[false] [kw]] [1 kw 1 nil]
+         [[false true]  [kw kw-index]] [1 kw (->int kw-index) nil]
+         [[false _ & _] [kw (:or "in" "from") & container]] [1 kw 1 container]
+         [[false true _ & _]  [kw kw-index (:or "in" "from") & container]] [1 kw (->int kw-index) container]
+         :else [0 "" 1 nil]))
 
 (defn handle-nop
   [world c]
@@ -124,20 +139,33 @@
                  (inc i)))
               result-ids))))
 
+(defn find-best-keywords-in
+  [sys candidates query]
+  (first (find-keywords-in sys candidates query)))
+
 (defn handle-get
   [world c]
   (let [sys (:system @world)
         player (:player-id @world)
         loc (:id (ent/get-component sys player c/CoorRef))
-        [q kw kw-index container] (parse-get-args (vec (rest (s/split c " "))))
-        target-items (:items (ent/get-component sys loc c/ItemBag))
-        item-ids (find-keywords-in sys target-items [q kw kw-index])]
+        loc-items (:items (ent/get-component sys loc c/ItemBag))
+        parsed-args (parse-q-kw-container (vec (rest (s/split c " "))))
+        container (last parsed-args)
+        container-ent (when container
+                        (find-best-keywords-in sys
+                                               (:items (ent/get-component sys player c/ItemBag))
+                                               (parse-kw-container container)))
+        source-items (if container-ent
+                       (:items (ent/get-component sys container-ent c/ItemBag))
+                       loc-items)
+        source (if container-ent container-ent loc)
+        item-ids (find-keywords-in sys source-items (butlast parsed-args))]
     (if (seq item-ids)
       (let [message (if (= 1 (count item-ids)) "You pick it up" "You pick them up")
             sys (loop [sys (:system @world)
                        i 0]
                   (if (< i (count item-ids))
-                    (recur (e/move-item sys loc player (nth item-ids i))
+                    (recur (e/move-item sys source player (nth item-ids i))
                            (inc i))
                     sys))]
         (swap! world assoc :system sys)
@@ -150,7 +178,7 @@
         player (:player-id @world)
         loc (:id (ent/get-component sys player c/CoorRef))
         target-items (:items (ent/get-component sys player c/ItemBag))
-        [q kw kw-index container] (parse-get-args (vec (rest (s/split c " "))))
+        [q kw kw-index container] (parse-q-kw-container (vec (rest (s/split c " "))))
         item-ids (find-keywords-in sys target-items [q kw kw-index])]
     (if (seq item-ids)
       (let [message (if (= 1 (count item-ids)) "You drop it" "You drop them")
