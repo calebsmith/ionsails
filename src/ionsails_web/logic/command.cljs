@@ -55,6 +55,32 @@
          [[false true _ & _]  [kw kw-index (:or "in" "from") & container]] [1 kw (->int kw-index) container]
          :else [0 "" 1 nil]))
 
+(defn parse-kw-or-container
+  [c-args]
+  (match [(mapv int? c-args) c-args]
+         [[false] [kw]] [1 kw 1 nil]
+         [[false true]  [kw kw-index]] [1 kw (->int kw-index) nil]
+         [[_ & _] [(:or "in" "from") & container]] [1 "" 1 container]
+         :else [0 "" 1 nil]))
+
+(defn find-keywords-in
+  [sys candidates [q kw kw-index]]
+  (remove nil?
+          (loop [candidates candidates
+                 result-ids []
+                 i 0]
+            (if (< i q)
+              (let [res-id (match-keyword sys candidates kw kw-index)]
+                (recur
+                 (remove #(= % res-id) candidates)
+                 (conj result-ids res-id)
+                 (inc i)))
+              result-ids))))
+
+(defn find-best-keywords-in
+  [sys candidates query]
+  (first (find-keywords-in sys candidates query)))
+
 (defn handle-nop
   [world c]
   (event/send :console {:category :echo :text (str c " is not a valid command")}))
@@ -72,7 +98,41 @@
   [world c]
   (swap! world assoc-in [:ui :console.messages] (buff/ring-buffer 250)))
 
-(defn handle-look
+(defn handle-look-object
+  [world sys items parsed-args]
+  (let [item-ent (find-best-keywords-in sys items parsed-args)
+        item-desc (:description (ent/get-component sys item-ent c/Description))
+        item-text (str "You look closely at the " item-desc "... Nothing interesting beyond the surface")]
+    (event/send :console {:category :item :text item-text})))
+
+(defn handle-look-in
+  [world sys items container-args]
+  (let [parsed-container-args (parse-kw-or-container container-args)
+        container-ent (find-best-keywords-in sys items parsed-container-args)
+        container-desc (:description (ent/get-component sys container-ent c/Description))
+        items (:items (ent/get-component sys container-ent c/ItemBag))
+        item-descs (map (fn [item-ent]
+                          (:description (ent/get-component sys item-ent c/Description))) items)]
+    (if (empty? item-descs)
+      (event/send :console {:category :info :text (str container-desc " is empty.")})
+      (event/send :console {:multi (concat [{:category :info :text (str container-desc " holds: ")}]
+                                           (mapv (fn [v] {:category :item :text v}) item-descs))}))))
+
+(defn handle-look-w-args
+  [world c-args]
+  (let [sys (:system @world)
+        player (:player-id @world)
+        loc (:id (ent/get-component sys player c/CoorRef))
+        loc-items (:items (ent/get-component sys loc c/ItemBag))
+        inv-items (:items (ent/get-component sys player c/ItemBag))
+        all-items (concat loc-items inv-items)
+        parsed (parse-kw-or-container c-args)
+        container (last parsed)]
+    (if container
+      (handle-look-in world sys all-items container)
+      (handle-look-object world sys all-items (butlast parsed)))))
+
+(defn handle-look-room
   [world c]
   (let [sys (:system @world)
         player (:player-id @world)
@@ -97,6 +157,13 @@
                            [{:category :exit :text "Exits:"}]
                            exit-descs))]
     (event/send :console {:multi msg-body})))
+
+(defn handle-look
+  [world c]
+  (let [c-args (vec (rest (s/split c " ")))]
+    (if (= (count c-args) 0)
+      (handle-look-room world c)
+      (handle-look-w-args world c-args))))
 
 (defn handle-inventory
   [world c]
@@ -124,24 +191,6 @@
                (e/change-loc sys player target-loc))
         (handle-look world ""))
       (event/send :console {:category :echo :text "No exit in that direction"}))))
-
-(defn find-keywords-in
-  [sys candidates [q kw kw-index]]
-  (remove nil?
-          (loop [candidates candidates
-                 result-ids []
-                 i 0]
-            (if (< i q)
-              (let [res-id (match-keyword sys candidates kw kw-index)]
-                (recur
-                 (remove #(= % res-id) candidates)
-                 (conj result-ids res-id)
-                 (inc i)))
-              result-ids))))
-
-(defn find-best-keywords-in
-  [sys candidates query]
-  (first (find-keywords-in sys candidates query)))
 
 (defn handle-get
   [world c]
