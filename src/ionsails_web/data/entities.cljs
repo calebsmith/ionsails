@@ -100,3 +100,10 @@
       (ent/update-component src c/ItemBag remove-item-from-ent item)
       (ent/update-component target c/ItemBag add-item-to-ent item)
       (ent/update-component item c/ItemContainer add-container-to-item target)))
+
+(defn move-items
+  [sys src target items]
+  (reduce (fn [curr-sys item]
+            (move-item curr-sys src target item))
+          sys
+          items))

@@ -208,16 +208,11 @@
                        (:items (ent/get-component sys container-ent c/ItemBag))
                        loc-items)
         source (if container-ent container-ent loc)
-        item-ids (find-keywords-in sys source-items (butlast parsed-args))]
+        item-ids (find-keywords-in sys source-items (butlast parsed-args))
+        message (if (= 1 (count item-ids)) "You pick it up" "You pick them up")]
     (if (seq item-ids)
-      (let [message (if (= 1 (count item-ids)) "You pick it up" "You pick them up")
-            sys (loop [sys (:system @world)
-                       i 0]
-                  (if (< i (count item-ids))
-                    (recur (e/move-item sys source player (nth item-ids i))
-                           (inc i))
-                    sys))]
-        (swap! world assoc :system sys)
+      (do
+        (swap! world assoc :system (e/move-items sys source player item-ids))
         (event/send :console {:category :echo :text message}))
       (event/send :console {:category :echo :text "That item isn't here"}))))
 
@@ -231,17 +226,11 @@
     (if (not container)
       (event/send :console {:category :echo :text "Must specify the item and what you are putting it in"})
       (let [container-ent (find-best-keywords-in sys player-items (parse-kw-container container))
-            item-ids (find-keywords-in sys player-items (butlast parsed-args))]
-        (prn item-ids)
+            item-ids (find-keywords-in sys player-items (butlast parsed-args))
+            message (if (= 1 (count item-ids)) "You put it in there" "You put them in there")]
         (if (seq item-ids)
-          (let [message (if (= 1 (count item-ids)) "You put it in there" "You put them in there")
-                sys (loop [sys (:system @world)
-                           i 0]
-                      (if (< i (count item-ids))
-                        (recur (e/move-item sys player container-ent (nth item-ids i))
-                               (inc i))
-                        sys))]
-            (swap! world assoc :system sys)
+          (do
+            (swap! world assoc :system (e/move-items sys player container-ent item-ids))
             (event/send :console {:category :echo :text message}))
           (event/send :console {:category :echo :text "That item isn't in there"}))))))
 
@@ -252,16 +241,11 @@
         loc (:id (ent/get-component sys player c/CoorRef))
         target-items (:items (ent/get-component sys player c/ItemBag))
         [q kw kw-index container] (parse-q-kw-container (vec (rest (s/split c " "))))
-        item-ids (find-keywords-in sys target-items [q kw kw-index])]
+        item-ids (find-keywords-in sys target-items [q kw kw-index])
+        message (if (= 1 (count item-ids)) "You drop it" "You drop them")]
     (if (seq item-ids)
-      (let [message (if (= 1 (count item-ids)) "You drop it" "You drop them")
-            sys (loop [sys (:system @world)
-                       i 0]
-                  (if (< i (count item-ids))
-                    (recur (e/move-item sys player loc (nth item-ids i))
-                           (inc i))
-                    sys))]
-        (swap! world assoc :system sys)
+      (do
+        (swap! world assoc :system (e/move-items sys player loc item-ids))
         (event/send :console {:category :echo :text message}))
       (event/send :console {:category :echo :text "You aren't holding that item"}))))
 
