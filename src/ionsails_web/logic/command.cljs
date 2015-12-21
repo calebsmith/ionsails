@@ -221,6 +221,30 @@
         (event/send :console {:category :echo :text message}))
       (event/send :console {:category :echo :text "That item isn't here"}))))
 
+(defn handle-put
+  [world c]
+  (let [sys (:system @world)
+        player (:player-id @world)
+        player-items (:items (ent/get-component sys player c/ItemBag))
+        parsed-args (parse-q-kw-container (vec (rest (s/split c " "))))
+        container (last parsed-args)]
+    (if (not container)
+      (event/send :console {:category :echo :text "Must specify the item and what you are putting it in"})
+      (let [container-ent (find-best-keywords-in sys player-items (parse-kw-container container))
+            item-ids (find-keywords-in sys player-items (butlast parsed-args))]
+        (prn item-ids)
+        (if (seq item-ids)
+          (let [message (if (= 1 (count item-ids)) "You put it in there" "You put them in there")
+                sys (loop [sys (:system @world)
+                           i 0]
+                      (if (< i (count item-ids))
+                        (recur (e/move-item sys player container-ent (nth item-ids i))
+                               (inc i))
+                        sys))]
+            (swap! world assoc :system sys)
+            (event/send :console {:category :echo :text message}))
+          (event/send :console {:category :echo :text "That item isn't in there"}))))))
+
 (defn handle-drop
   [world c]
   (let [sys (:system @world)
@@ -257,6 +281,7 @@
   {"look" handle-look
    "inventory" handle-inventory
    "get" handle-get
+   "put" handle-put
    "drop" handle-drop
    "left" handle-left
    "right" handle-right
