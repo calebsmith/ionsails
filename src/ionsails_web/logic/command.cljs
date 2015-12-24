@@ -65,17 +65,19 @@
 
 (defn find-keywords-in
   [sys candidates [q kw kw-index]]
-  (remove nil?
-          (loop [candidates candidates
-                 result-ids []
-                 i 0]
-            (if (< i q)
-              (let [res-id (match-keyword sys candidates kw kw-index)]
-                (recur
-                 (remove #(= % res-id) candidates)
-                 (conj result-ids res-id)
-                 (inc i)))
-              result-ids))))
+  (if (= kw "all")
+    candidates
+    (remove nil?
+            (loop [candidates candidates
+                   result-ids []
+                   i 0]
+              (if (< i q)
+                (let [res-id (match-keyword sys candidates kw kw-index)]
+                  (recur
+                   (remove #(= % res-id) candidates)
+                   (conj result-ids res-id)
+                   (inc i)))
+                result-ids)))))
 
 (defn find-best-keywords-in
   [sys candidates query]
@@ -116,9 +118,10 @@
         item-descs (map (fn [item-ent]
                           (:description (ent/get-component sys item-ent c/Description))) items)]
     (if (empty? item-descs)
-      (if (nil? items)
-        (event/send :console {:category :info :text (str container-desc " can not hold anything.")})
-        (event/send :console {:category :info :text (str container-desc " is empty.")}))
+      (cond
+        (nil? container-ent) (event/send :console {:category :info :text "You don't have a container like that"})
+        (nil? items) (event/send :console {:category :info :text (str container-desc " can not hold anything.")})
+        :else (event/send :console {:category :info :text (str container-desc " is empty.")}))
       (event/send :console {:multi (concat [{:category :info :text (str container-desc " holds: ")}]
                                            (mapv (fn [v] {:category :item :text v}) item-descs))}))))
 
@@ -245,13 +248,16 @@
     (if (not container)
       (event/send :console {:category :echo :text "Must specify the item and what you are putting it in"})
       (let [container-ent (find-best-keywords-in sys player-items (parse-kw-container container))
-            item-ids (find-keywords-in sys player-items (butlast parsed-args))
+            unsafe-item-ids (find-keywords-in sys player-items (butlast parsed-args))
+            item-ids (remove #{container-ent} unsafe-item-ids)
             message (if (= 1 (count item-ids)) "You put it in there" "You put them in there")]
         (if (seq item-ids)
           (do
             (swap! world assoc :system (e/move-items sys player container-ent item-ids))
             (event/send :console {:category :echo :text message}))
-          (event/send :console {:category :echo :text "That item isn't in there"}))))))
+          (if (not= item-ids unsafe-item-ids)
+            (event/send :console {:category :echo :text "You can't put something inside of itself"})
+            (event/send :console {:category :echo :text "You don't have anything like that"})))))))
 
 (defn handle-drop
   [world c]
