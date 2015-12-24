@@ -102,7 +102,9 @@
   [world sys items parsed-args]
   (let [item-ent (find-best-keywords-in sys items parsed-args)
         item-desc (:description (ent/get-component sys item-ent c/Description))
-        item-text (str "You look closely at the " item-desc "... Nothing interesting beyond the surface")]
+        item-text (if item-desc
+                    (str "You look closely at " (s/lower-case item-desc) "... Nothing interesting beyond the surface")
+                    "You see nothing like that here.")]
     (event/send :console {:category :item :text item-text})))
 
 (defn handle-look-in
@@ -114,7 +116,9 @@
         item-descs (map (fn [item-ent]
                           (:description (ent/get-component sys item-ent c/Description))) items)]
     (if (empty? item-descs)
-      (event/send :console {:category :info :text (str container-desc " is empty.")})
+      (if (nil? items)
+        (event/send :console {:category :info :text (str container-desc " can not hold anything.")})
+        (event/send :console {:category :info :text (str container-desc " is empty.")}))
       (event/send :console {:multi (concat [{:category :info :text (str container-desc " holds: ")}]
                                            (mapv (fn [v] {:category :item :text v}) item-descs))}))))
 
@@ -158,12 +162,27 @@
                            exit-descs))]
     (event/send :console {:multi msg-body})))
 
+(defn handle-look-direction
+  [world c-args]
+  (let [sys (:system @world)
+        player (:player-id @world)
+        loc (:id (ent/get-component sys player c/CoorRef))
+        direction (first c-args)
+        exit-items (:items (ent/get-component sys loc c/CoorRefMap))
+        exit-v (get exit-items (keyword direction))
+        exit-room-name (:name (ent/get-component sys exit-v c/Ident))]
+    (if exit-room-name
+      (event/send :console {:category :exit :text (str "To the " direction " is " (s/lower-case exit-room-name))})
+      (event/send :console {:category :info :text "There is no exit in that direction."}))))
+
 (defn handle-look
   [world c]
   (let [c-args (vec (rest (s/split c " ")))]
     (if (= (count c-args) 0)
       (handle-look-room world c)
-      (handle-look-w-args world c-args))))
+      (if (contains? #{"left" "right" "up" "down" "forward" "backward"} (first c-args))
+        (handle-look-direction world c-args)
+        (handle-look-w-args world c-args)))))
 
 (defn handle-inventory
   [world c]
