@@ -5,83 +5,10 @@
             [brute.entity :as ent]
             [ionsails-web.data.components :as c]
             [ionsails-web.data.entities :as e]
+            [ionsails-web.data.queries :as q]
             [ionsails-web.event :as event :refer-macros [deflistener]]))
 
 (declare commands)
-
-(defn match-keyword
-  [sys entities kw-query kw-query-index]
-  (let [ent-triples (map (fn [e] [e
-                                  (set (:keywords (ent/get-component sys e c/Keywords)))
-                                  (:name (ent/get-component sys e c/Ident))])
-                         entities)
-        ent-triples-candidates (filter (fn [[id kws name]]
-                                         (contains? kws kw-query))
-                                       ent-triples)
-        ent-triples-candidates (vec (sort-by #(nth % 2) ent-triples-candidates))
-        kw-query-index (if (< kw-query-index (count ent-triples-candidates))
-                         (if (< kw-query-index 0) 0 (dec kw-query-index))
-                         (dec (count ent-triples-candidates)))
-        [item-id item-kw item-name] (get ent-triples-candidates kw-query-index)]
-    item-id))
-
-(defn ->int
-  [n]
-  (js/parseInt n))
-
-(defn int?
-  [n]
-  (-> n ->int js/isNaN not))
-
-(defn parse-q-kw-container
-  [c-args]
-  (match [(mapv int? c-args) c-args]
-         [[false] [kw]] [1 kw 1 nil]
-         [[true false] [q kw]] [(->int q) kw 1 nil]
-         [[false true]  [kw kw-index]] [1 kw (->int kw-index) nil]
-         [[true false true] [q kw kw-index]] [(->int q) kw (->int kw-index) nil]
-         [[false _ & _] [kw (:or "in" "from") & container]] [1 kw 1 container]
-         [[true false _ & _] [q kw (:or "in" "from") & container]] [(->int q) kw 1 container]
-         [[false true _ & _]  [kw kw-index (:or "in" "from") & container]] [1 kw (->int kw-index) container]
-         [[true false true _ & _] [q kw kw-index (:or "in" "from") & container]] [(->int q) kw (->int kw-index) container]
-         :else [0 "" 1 nil]))
-
-(defn parse-kw-container
-  [c-args]
-  (match [(mapv int? c-args) c-args]
-         [[false] [kw]] [1 kw 1 nil]
-         [[false true]  [kw kw-index]] [1 kw (->int kw-index) nil]
-         [[false _ & _] [kw (:or "in" "from") & container]] [1 kw 1 container]
-         [[false true _ & _]  [kw kw-index (:or "in" "from") & container]] [1 kw (->int kw-index) container]
-         :else [0 "" 1 nil]))
-
-(defn parse-kw-or-container
-  [c-args]
-  (match [(mapv int? c-args) c-args]
-         [[false] [kw]] [1 kw 1 nil]
-         [[false true]  [kw kw-index]] [1 kw (->int kw-index) nil]
-         [[_ & _] [(:or "in" "from") & container]] [1 "" 1 container]
-         :else [0 "" 1 nil]))
-
-(defn find-keywords-in
-  [sys candidates [q kw kw-index]]
-  (if (= kw "all")
-    candidates
-    (remove nil?
-            (loop [candidates candidates
-                   result-ids []
-                   i 0]
-              (if (< i q)
-                (let [res-id (match-keyword sys candidates kw kw-index)]
-                  (recur
-                   (remove #(= % res-id) candidates)
-                   (conj result-ids res-id)
-                   (inc i)))
-                result-ids)))))
-
-(defn find-best-keywords-in
-  [sys candidates query]
-  (first (find-keywords-in sys candidates query)))
 
 (defn handle-nop
   [world c]
@@ -102,7 +29,7 @@
 
 (defn handle-look-object
   [world sys items parsed-args]
-  (let [item-ent (find-best-keywords-in sys items parsed-args)
+  (let [item-ent (q/find-best-keywords-in sys items parsed-args)
         item-desc (:description (ent/get-component sys item-ent c/Description))
         item-text (if item-desc
                     (str "You look closely at " (s/lower-case item-desc) "... Nothing interesting beyond the surface")
@@ -111,8 +38,8 @@
 
 (defn handle-look-in
   [world sys items container-args]
-  (let [parsed-container-args (parse-kw-or-container container-args)
-        container-ent (find-best-keywords-in sys items parsed-container-args)
+  (let [parsed-container-args (q/parse-kw-or-container container-args)
+        container-ent (q/find-best-keywords-in sys items parsed-container-args)
         container-desc (:description (ent/get-component sys container-ent c/Description))
         items (:items (ent/get-component sys container-ent c/ItemBag))
         item-descs (map (fn [item-ent]
@@ -133,7 +60,7 @@
         loc-items (:items (ent/get-component sys loc c/ItemBag))
         inv-items (:items (ent/get-component sys player c/ItemBag))
         all-items (concat loc-items inv-items)
-        parsed (parse-kw-or-container c-args)
+        parsed (q/parse-kw-or-container c-args)
         container (last parsed)]
     (if container
       (handle-look-in world sys all-items container)
@@ -220,17 +147,17 @@
         player (:player-id @world)
         loc (:id (ent/get-component sys player c/CoorRef))
         loc-items (:items (ent/get-component sys loc c/ItemBag))
-        parsed-args (parse-q-kw-container (vec (rest (s/split c " "))))
+        parsed-args (q/parse-q-kw-container (vec (rest (s/split c " "))))
         container (last parsed-args)
         container-ent (when container
-                        (find-best-keywords-in sys
-                                               (:items (ent/get-component sys player c/ItemBag))
-                                               (parse-kw-container container)))
+                        (q/find-best-keywords-in sys
+                                                 (:items (ent/get-component sys player c/ItemBag))
+                                                 (q/parse-kw-container container)))
         source-items (if container-ent
                        (:items (ent/get-component sys container-ent c/ItemBag))
                        loc-items)
         source (if container-ent container-ent loc)
-        item-ids (find-keywords-in sys source-items (butlast parsed-args))
+        item-ids (q/find-keywords-in sys source-items (butlast parsed-args))
         message (if (= 1 (count item-ids)) "You pick it up" "You pick them up")]
     (if (seq item-ids)
       (do
@@ -243,12 +170,12 @@
   (let [sys (:system @world)
         player (:player-id @world)
         player-items (:items (ent/get-component sys player c/ItemBag))
-        parsed-args (parse-q-kw-container (vec (rest (s/split c " "))))
+        parsed-args (q/parse-q-kw-container (vec (rest (s/split c " "))))
         container (last parsed-args)]
     (if (not container)
       (event/send :console {:category :echo :text "Must specify the item and what you are putting it in"})
-      (let [container-ent (find-best-keywords-in sys player-items (parse-kw-container container))
-            unsafe-item-ids (find-keywords-in sys player-items (butlast parsed-args))
+      (let [container-ent (q/find-best-keywords-in sys player-items (q/parse-kw-container container))
+            unsafe-item-ids (q/find-keywords-in sys player-items (butlast parsed-args))
             item-ids (remove #{container-ent} unsafe-item-ids)
             message (if (= 1 (count item-ids)) "You put it in there" "You put them in there")]
         (if (seq item-ids)
@@ -265,8 +192,8 @@
         player (:player-id @world)
         loc (:id (ent/get-component sys player c/CoorRef))
         target-items (:items (ent/get-component sys player c/ItemBag))
-        [q kw kw-index container] (parse-q-kw-container (vec (rest (s/split c " "))))
-        item-ids (find-keywords-in sys target-items [q kw kw-index])
+        [q kw kw-index container] (q/parse-q-kw-container (vec (rest (s/split c " "))))
+        item-ids (q/find-keywords-in sys target-items [q kw kw-index])
         message (if (= 1 (count item-ids)) "You drop it" "You drop them")]
     (if (seq item-ids)
       (do
@@ -307,7 +234,7 @@
   [world {:keys [command]}]
   (let [command (-> command s/trim s/lower-case)
         command-top (first (s/split command " "))
-        handler (get command-lookup command-top handle-nop)]
-    (handler world command)
+        handler (get command-lookup command-top handle-nop)
+        result (handler world command)]
     (when (not= handler handle-nop)
       (swap! world update-in [:ui :command.history] conj command))))
