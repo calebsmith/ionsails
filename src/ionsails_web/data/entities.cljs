@@ -96,10 +96,12 @@
 
 (defn move-item
   [sys src target item]
-  (-> sys
-      (ent/update-component src c/ItemBag remove-item-from-ent item)
-      (ent/update-component target c/ItemBag add-item-to-ent item)
-      (ent/update-component item c/ItemContainer add-container-to-item target)))
+  (if (= src target)
+    sys
+    (-> sys
+        (ent/update-component src c/ItemBag remove-item-from-ent item)
+        (ent/update-component target c/ItemBag add-item-to-ent item)
+        (ent/update-component item c/ItemContainer add-container-to-item target))))
 
 (defn move-items
   [sys src target items]
