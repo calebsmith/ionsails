@@ -8,11 +8,11 @@
             [ionsails-web.data.queries :as q]
             [ionsails-web.event :as event :refer-macros [deflistener]]))
 
-(declare commands)
+(declare commands handle-command)
 
 (defn handle-nop
   [world c]
-  (event/send :console {:category :echo :text (str c " is not a valid command")}))
+  [{:category :echo :text (str c " is not a valid command")}])
 
 (defn handle-help
   [world c]
@@ -21,11 +21,12 @@
         formatted-commands (for [c commands] (str "    " c))
         help-text (concat help-text-preface formatted-commands)
         formatted-help-text (for [v help-text] {:category :echo :text v})]
-    (event/send :console {:multi formatted-help-text})))
+    [formatted-help-text]))
 
 (defn handle-clear
   [world c]
-  (swap! world assoc-in [:ui :console.messages] (buff/ring-buffer 250)))
+  (swap! world assoc-in [:ui :console.messages] (buff/ring-buffer 250))
+  [])
 
 (defn handle-look-object
   [world sys items parsed-args]
@@ -34,7 +35,7 @@
         item-text (if item-desc
                     (str "You look closely at " (s/lower-case item-desc) "... Nothing interesting beyond the surface")
                     "You see nothing like that here.")]
-    (event/send :console {:category :item :text item-text})))
+    [{:category :item :text item-text}]))
 
 (defn handle-look-in
   [world sys items container-args]
@@ -46,11 +47,11 @@
                           (:description (ent/get-component sys item-ent c/Description))) items)]
     (if (empty? item-descs)
       (cond
-        (nil? container-ent) (event/send :console {:category :info :text "You don't have a container like that"})
-        (nil? items) (event/send :console {:category :info :text (str container-desc " can not hold anything.")})
-        :else (event/send :console {:category :info :text (str container-desc " is empty.")}))
-      (event/send :console {:multi (concat [{:category :info :text (str container-desc " holds: ")}]
-                                           (mapv (fn [v] {:category :item :text v}) item-descs))}))))
+        (nil? container-ent) [{:category :info :text "You don't have a container like that"}]
+        (nil? items) [{:category :info :text (str container-desc " can not hold anything.")}]
+        :else [{:category :info :text (str container-desc " is empty.")}])
+      [(concat [{:category :info :text (str container-desc " holds: ")}]
+               (mapv (fn [v] {:category :item :text v}) item-descs))])))
 
 (defn handle-look-w-args
   [world c-args]
@@ -90,7 +91,7 @@
                          (when ((complement empty?) exit-descs)
                            [{:category :exit :text "Exits:"}]
                            exit-descs))]
-    (event/send :console {:multi msg-body})))
+    [msg-body]))
 
 (defn handle-look-direction
   [world c-args]
@@ -102,8 +103,8 @@
         exit-v (get exit-items (keyword direction))
         exit-room-name (:name (ent/get-component sys exit-v c/Ident))]
     (if exit-room-name
-      (event/send :console {:category :exit :text (str "To the " direction " is " (s/lower-case exit-room-name))})
-      (event/send :console {:category :info :text "There is no exit in that direction."}))))
+      [{:category :exit :text (str "To the " direction " is " (s/lower-case exit-room-name))}]
+      [{:category :info :text "There is no exit in that direction."}])))
 
 (defn handle-look
   [world c]
@@ -124,7 +125,7 @@
         msg-body (if (empty? item-names)
                    [{:category :echo :text "Your inventory is empty"}]
                    (concat [{:category :echo :text "You are holding: "}] item-names))]
-    (event/send :console {:multi msg-body})))
+    [msg-body]))
 
 (defn handle-move
   [world target]
@@ -135,11 +136,8 @@
         exit-items (:items (ent/get-component sys loc c/CoorRefMap))
         target-loc (target exit-items)]
     (if target-loc
-      (do
-        (swap! world assoc :system
-               (e/change-loc sys player target-loc))
-        (handle-look world ""))
-      (event/send :console {:category :echo :text "No exit in that direction"}))))
+      [[] [[e/change-loc player target-loc]] #(handle-command world "look")]
+      [{:category :echo :text "No exit in that direction"}])))
 
 (defn handle-get
   [world c]
@@ -160,10 +158,8 @@
         item-ids (q/find-keywords-in sys source-items (butlast parsed-args))
         message (if (= 1 (count item-ids)) "You pick it up" "You pick them up")]
     (if (seq item-ids)
-      (do
-        (swap! world assoc :system (e/move-items sys source player item-ids))
-        (event/send :console {:category :echo :text message}))
-      (event/send :console {:category :echo :text "That item isn't here"}))))
+      [{:category :echo :text message} [[e/move-items source player item-ids]]]
+      [{:category :echo :text "That item isn't here"}])))
 
 (defn handle-put
   [world c]
@@ -173,18 +169,17 @@
         parsed-args (q/parse-q-kw-container (vec (rest (s/split c " "))))
         container (last parsed-args)]
     (if (not container)
-      (event/send :console {:category :echo :text "Must specify the item and what you are putting it in"})
+      [[{:category :echo :text "Must specify the item and what you are putting it in"}]]
       (let [container-ent (q/find-best-keywords-in sys player-items (q/parse-kw-container container))
             unsafe-item-ids (q/find-keywords-in sys player-items (butlast parsed-args))
             item-ids (remove #{container-ent} unsafe-item-ids)
             message (if (= 1 (count item-ids)) "You put it in there" "You put them in there")]
         (if (seq item-ids)
-          (do
-            (swap! world assoc :system (e/move-items sys player container-ent item-ids))
-            (event/send :console {:category :echo :text message}))
+          [{:category :echo :text message}
+           [[e/move-items player container-ent item-ids]]]
           (if (not= item-ids unsafe-item-ids)
-            (event/send :console {:category :echo :text "You can't put something inside of itself"})
-            (event/send :console {:category :echo :text "You don't have anything like that"})))))))
+            [{:category :echo :text "You can't put something inside of itself"}]
+            [{:category :echo :text "You don't have anything like that"}]))))))
 
 (defn handle-drop
   [world c]
@@ -196,10 +191,9 @@
         item-ids (q/find-keywords-in sys target-items [q kw kw-index])
         message (if (= 1 (count item-ids)) "You drop it" "You drop them")]
     (if (seq item-ids)
-      (do
-        (swap! world assoc :system (e/move-items sys player loc item-ids))
-        (event/send :console {:category :echo :text message}))
-      (event/send :console {:category :echo :text "You aren't holding that item"}))))
+      [{:category :echo :text message}
+       [[e/move-items player loc item-ids]]]
+      [{:category :echo :text "You aren't holding that item"}])))
 
 (def handle-left #(handle-move %1 :left))
 (def handle-right #(handle-move %1 :right))
@@ -210,7 +204,7 @@
 
 (defn handle-initial
   [world c]
-  (handle-look world c)
+  (handle-command world "look")
   (event/send :console {:category :echo :text "Type \"help\" in the input box below for help"}))
 
 (def command-lookup
@@ -230,11 +224,29 @@
 
 (def commands (keys command-lookup))
 
-(deflistener handle-command :command
-  [world {:keys [command]}]
+(defn perform-actions
+  [world actions]
+  (reduce (fn [curr-sys [e-func & args]]
+            (apply e-func (cons curr-sys args)))
+          (:system @world)
+          actions))
+
+(defn handle-command
+  [world command]
   (let [command (-> command s/trim s/lower-case)
         command-top (first (s/split command " "))
         handler (get command-lookup command-top handle-nop)
-        result (handler world command)]
+        [messages actions cb] (handler world command)]
     (when (not= handler handle-nop)
-      (swap! world update-in [:ui :command.history] conj command))))
+      (swap! world update-in [:ui :command.history] conj command))
+    (when messages
+      (if (sequential? messages)
+        (event/send :console {:multi messages})
+        (event/send :console messages)))
+    (when actions
+      (swap! world assoc :system (perform-actions world actions))
+      (when cb (cb)))))
+
+(deflistener handle-command :command
+  [world {:keys [command]}]
+  (handle-command world command))
